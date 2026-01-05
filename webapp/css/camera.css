@@ -1,0 +1,282 @@
+/* ============================================
+   Camera Screen Styles
+   ============================================ */
+
+/* Camera Header */
+.camera-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--neutral-900);
+    color: white;
+    padding: var(--spacing-sm);
+    box-shadow: var(--shadow-md);
+}
+
+.camera-header .header-title {
+    flex: 1;
+    text-align: center;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+}
+
+/* Camera Container */
+.camera-container {
+    position: relative;
+    flex: 1;
+    background: black;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Video Preview (Base Layer - z-index: 0) */
+#camera-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+/* Overlay Canvas (Grid & Lines - z-index: 10) */
+#overlay-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Foot Guide Container (z-index: 20) */
+.foot-guide-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    pointer-events: none;
+    width: 40%;
+    max-width: 300px;
+    opacity: 0.7;
+}
+
+#foot-guide {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.5));
+}
+
+/* Level Indicator Container (z-index: 35) */
+.level-indicator-container {
+    position: absolute;
+    top: var(--spacing-md);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 35;
+    width: 90%;
+    max-width: 400px;
+}
+
+.level-indicator {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.level-bar {
+    width: 100%;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    position: relative;
+    overflow: hidden;
+}
+
+.level-marker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 100%;
+    background: white;
+    transition: transform 100ms ease;
+}
+
+.level-marker::before,
+.level-marker::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.level-marker::before {
+    top: 4px;
+}
+
+.level-marker::after {
+    bottom: 4px;
+}
+
+.level-text {
+    color: white;
+    font-weight: 600;
+    font-size: var(--font-size-base);
+    text-align: center;
+}
+
+.level-indicator.level-ok .level-text {
+    color: var(--success);
+}
+
+.level-indicator.level-warning .level-text {
+    color: var(--warning);
+}
+
+.level-indicator.level-ok .level-marker {
+    background: var(--success);
+}
+
+.level-indicator.level-ok .level-marker::before,
+.level-indicator.level-ok .level-marker::after {
+    background: var(--success);
+}
+
+.level-indicator.level-warning .level-marker {
+    background: var(--danger);
+}
+
+.level-indicator.level-warning .level-marker::before,
+.level-indicator.level-warning .level-marker::after {
+    background: var(--danger);
+}
+
+/* Step Guidance (z-index: 40) */
+.step-guidance {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: 90%;
+    max-width: 500px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-lg);
+}
+
+.step-header {
+    text-align: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+#step-counter {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    padding: 0.375rem 1rem;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+}
+
+.step-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.step-instruction {
+    color: white;
+    font-size: var(--font-size-lg);
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Camera Controls */
+.camera-controls {
+    background: var(--neutral-900);
+    padding: var(--spacing-md);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-capture {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: white;
+    color: var(--neutral-900);
+    font-size: var(--font-size-xl);
+    border: 4px solid var(--neutral-700);
+    padding: 0;
+    transition: all var(--transition-base);
+}
+
+.btn-capture:not(:disabled):active {
+    transform: scale(0.9);
+    background: var(--neutral-200);
+}
+
+.btn-capture:disabled {
+    background: var(--neutral-700);
+    border-color: var(--neutral-800);
+    color: var(--neutral-500);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+    .foot-guide-container {
+        width: 50%;
+    }
+
+    .step-guidance {
+        bottom: 80px;
+        width: 95%;
+        padding: var(--spacing-sm);
+    }
+
+    .step-instruction {
+        font-size: var(--font-size-base);
+    }
+
+    .btn-capture {
+        width: 70px;
+        height: 70px;
+        font-size: var(--font-size-lg);
+    }
+}
+
+/* Landscape Orientation */
+@media (orientation: landscape) {
+    .step-guidance {
+        bottom: var(--spacing-sm);
+        max-width: 400px;
+    }
+
+    .level-indicator-container {
+        top: var(--spacing-sm);
+        max-width: 300px;
+    }
+}

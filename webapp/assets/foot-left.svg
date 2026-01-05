@@ -1,0 +1,23 @@
+<svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left foot outline (lateral view) -->
+  <path 
+    d="M 100,40 Q 85,60 80,90 Q 75,130 70,170 Q 68,200 72,230 Q 78,270 90,310 Q 100,340 115,365 Q 125,380 140,390 L 145,385 Q 155,370 160,350 Q 165,320 168,290 Q 170,250 165,210 Q 160,170 150,130 Q 140,90 125,60 Q 115,45 100,40 Z"
+    fill="none"
+    stroke="rgba(37, 99, 235, 0.8)"
+    stroke-width="3"
+    stroke-dasharray="8,4"
+  />
+  
+  <!-- Anatomical landmark markers -->
+  <!-- Fibular head (腓骨頭) -->
+  <circle cx="85" cy="80" r="10" fill="rgba(239, 68, 68, 0.7)" stroke="white" stroke-width="2"/>
+  <text x="85" y="85" text-anchor="middle" fill="white" font-size="12" font-weight="bold">1</text>
+  
+  <!-- Lateral malleolus (外果) -->
+  <circle cx="75" cy="240" r="10" fill="rgba(239, 68, 68, 0.7)" stroke="white" stroke-width="2"/>
+  <text x="75" y="245" text-anchor="middle" fill="white" font-size="12" font-weight="bold">2</text>
+  
+  <!-- 5th metatarsal head (第5中足骨頭) -->
+  <circle cx="145" cy="370" r="10" fill="rgba(239, 68, 68, 0.7)" stroke="white" stroke-width="2"/>
+  <text x="145" y="375" text-anchor="middle" fill="white" font-size="12" font-weight="bold">3</text>
+</svg>
