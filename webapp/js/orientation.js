@@ -15,6 +15,7 @@ class OrientationManager {
             level_tolerance_deg: LEVEL_TOLERANCE_DEG
         };
         this.onUpdateCallback = null;
+        this.boundHandleOrientation = null;
     }
 
     /**
@@ -49,7 +50,8 @@ class OrientationManager {
         }
 
         this.onUpdateCallback = onUpdate;
-        window.addEventListener('deviceorientation', this.handleOrientation.bind(this), true);
+        this.boundHandleOrientation = this.handleOrientation.bind(this);
+        window.addEventListener('deviceorientation', this.boundHandleOrientation, true);
         this.isEnabled = true;
 
         console.log('Orientation tracking started');
@@ -96,8 +98,9 @@ class OrientationManager {
      * Stop orientation tracking
      */
     stop() {
-        if (this.isEnabled) {
-            window.removeEventListener('deviceorientation', this.handleOrientation);
+        if (this.isEnabled && this.boundHandleOrientation) {
+            window.removeEventListener('deviceorientation', this.boundHandleOrientation);
+            this.boundHandleOrientation = null;
             this.isEnabled = false;
             console.log('Orientation tracking stopped');
         }

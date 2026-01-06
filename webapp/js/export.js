@@ -16,6 +16,13 @@ class ExportManager {
     }
 
     /**
+     * Sanitize filename to remove invalid characters
+     */
+    sanitizeFilename(str) {
+        return str.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    /**
      * Export as CSV
      */
     exportCSV(data = this.currentData) {
@@ -91,7 +98,7 @@ class ExportManager {
         ].join('\n');
 
         // Download
-        const filename = `${data.subject_id}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.csv`;
+        const filename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.csv`;
         this.downloadFile(csvContent, filename, 'text/csv');
     }
 
@@ -105,7 +112,7 @@ class ExportManager {
         }
 
         const jsonContent = JSON.stringify(data, null, 2);
-        const filename = `${data.subject_id}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.json`;
+        const filename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.json`;
         this.downloadFile(jsonContent, filename, 'application/json');
     }
 
@@ -118,7 +125,7 @@ class ExportManager {
             return;
         }
 
-        const baseFilename = `${data.subject_id}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}`;
+        const baseFilename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}`;
 
         // Export original image
         originalCanvas.toBlob((blob) => {

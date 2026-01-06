@@ -32,18 +32,18 @@ class StorageManager {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                
+
                 // Create object store if it doesn't exist
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    const objectStore = db.createObjectStore(STORE_NAME, { 
-                        keyPath: 'session_id' 
+                    const objectStore = db.createObjectStore(STORE_NAME, {
+                        keyPath: 'session_id'
                     });
-                    
+
                     // Create indexes
                     objectStore.createIndex('subject_id', 'subject_id', { unique: false });
                     objectStore.createIndex('timestamp', 'timestamp', { unique: false });
                     objectStore.createIndex('side', 'side', { unique: false });
-                    
+
                     console.log('Object store created');
                 }
             };
@@ -57,7 +57,7 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
-            
+
             const request = objectStore.put(data);
 
             request.onsuccess = () => {
@@ -79,7 +79,7 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const objectStore = transaction.objectStore(STORE_NAME);
-            
+
             const request = objectStore.get(sessionId);
 
             request.onsuccess = () => {
@@ -99,7 +99,7 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const objectStore = transaction.objectStore(STORE_NAME);
-            
+
             const request = objectStore.getAll();
 
             request.onsuccess = () => {
@@ -119,7 +119,7 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
-            
+
             const request = objectStore.delete(sessionId);
 
             request.onsuccess = () => {
@@ -137,7 +137,7 @@ class StorageManager {
      * Generate unique session ID
      */
     generateSessionId() {
-        return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     }
 }
 

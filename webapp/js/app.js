@@ -32,9 +32,21 @@ class AnkleCaptureApp {
     async init() {
         console.log('AnkleCapture initializing...');
 
-        // Check browser support
+        // Check browser support for all required features
+        const missingFeatures = [];
+
         if (!CameraManager.isSupported()) {
-            alert('このブラウザはカメラAPIをサポートしていません。');
+            missingFeatures.push('カメラAPI');
+        }
+        if (!OrientationManager.isSupported()) {
+            missingFeatures.push('傾き検出API');
+        }
+        if (!window.indexedDB) {
+            missingFeatures.push('ローカルストレージ (IndexedDB)');
+        }
+
+        if (missingFeatures.length > 0) {
+            alert(`このブラウザは以下の機能をサポートしていません:\n- ${missingFeatures.join('\n- ')}\n\niPhone Safari 13以降を推奨します。`);
             return;
         }
 

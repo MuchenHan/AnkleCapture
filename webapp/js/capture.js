@@ -61,7 +61,7 @@ class CaptureManager {
         const captureBtn = document.getElementById('btn-capture');
 
         if (counterEl) {
-            counterEl.textContent = `Step ${this.currentStep}/${this.totalSteps}`;
+            counterEl.textContent = `ステップ ${this.currentStep}/${this.totalSteps}`;
         }
 
         if (instructionEl) {
@@ -73,10 +73,11 @@ class CaptureManager {
             confirmBtn.style.display = this.currentStep === 4 ? 'none' : 'block';
         }
 
-        // Enable capture button only after all steps completed
+        // Enable capture button only after all steps completed AND distance confirmed
         if (captureBtn) {
-            captureBtn.disabled = this.currentStep < this.totalSteps ||
-                this.checklist.distance_confirmed === null;
+            const allStepsComplete = this.currentStep >= this.totalSteps;
+            const distanceConfirmed = this.checklist.distance_confirmed !== null;
+            captureBtn.disabled = !(allStepsComplete && distanceConfirmed);
         }
     }
 

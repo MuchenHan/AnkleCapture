@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -7,12 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AnkleCapture">
     <title>AnkleCapture - 足関節角度測定</title>
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/camera.css">
     <link rel="stylesheet" href="css/measurement.css">
 </head>
+
 <body>
     <!-- Screen 1: Subject Information -->
     <div id="screen-subject" class="screen active">
@@ -20,23 +22,23 @@
             <h1>📱 AnkleCapture</h1>
             <p class="subtitle">足関節角度測定システム</p>
         </header>
-        
+
         <main class="content">
             <form id="subject-form" class="form-card">
                 <h2>被験者情報</h2>
-                
+
                 <div class="form-group">
                     <label for="subject-id">被験者ID *</label>
-                    <input type="text" id="subject-id" name="subject-id" required 
-                           placeholder="例: P001" autocomplete="off">
+                    <input type="text" id="subject-id" name="subject-id" required placeholder="例: P001"
+                        autocomplete="off">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="operator-id">測定者ID</label>
-                    <input type="text" id="operator-id" name="operator-id" 
-                           placeholder="例: OT_yamada" autocomplete="off">
+                    <input type="text" id="operator-id" name="operator-id" placeholder="例: OT_yamada"
+                        autocomplete="off">
                 </div>
-                
+
                 <div class="form-group">
                     <label>測定側 *</label>
                     <div class="radio-group">
@@ -50,15 +52,14 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="measurement-type">測定種別 *</label>
                     <select id="measurement-type" name="measurement-type" required>
                         <option value="ankle_dorsiflexion">足関節背屈角度</option>
-                        <option value="popliteal_angle">膝窩角度</option>
                     </select>
                 </div>
-                
+
                 <button type="submit" class="btn btn-primary btn-large">
                     📷 撮影を開始
                 </button>
@@ -84,15 +85,15 @@
         <div id="camera-container" class="camera-container">
             <!-- Video Stream (z-index: 0) -->
             <video id="camera-preview" playsinline muted autoplay></video>
-            
+
             <!-- Canvas for Grid and Lines (z-index: 10) -->
             <canvas id="overlay-canvas"></canvas>
-            
+
             <!-- SVG for Foot Outline (z-index: 20) -->
             <div id="foot-guide-container" class="foot-guide-container">
                 <img id="foot-guide" src="assets/foot-left.svg" alt="足部ガイド">
             </div>
-            
+
             <!-- Level Indicator (z-index: 35) -->
             <div id="level-indicator-container" class="level-indicator-container">
                 <div id="level-indicator" class="level-indicator">
@@ -105,11 +106,11 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- Step Guidance (z-index: 40) -->
             <div id="step-guidance" class="step-guidance">
                 <div class="step-header">
-                    <span id="step-counter">Step 1/4</span>
+                    <span id="step-counter">ステップ 1/4</span>
                 </div>
                 <div class="step-content">
                     <p id="step-instruction" class="step-instruction">
@@ -138,7 +139,7 @@
             </button>
             <h2>角度測定</h2>
         </header>
-        
+
         <main class="content">
             <div class="measurement-container">
                 <div class="instruction-card">
@@ -152,11 +153,11 @@
                         <strong>測定角度:</strong> <span id="angle-value">--</span>°
                     </div>
                 </div>
-                
+
                 <div class="image-container">
                     <canvas id="measurement-canvas"></canvas>
                 </div>
-                
+
                 <div class="measurement-controls">
                     <button id="btn-reset-points" class="btn btn-secondary">
                         🔄 リセット
@@ -174,7 +175,7 @@
         <header class="app-header">
             <h2>データエクスポート</h2>
         </header>
-        
+
         <main class="content">
             <div class="export-container">
                 <div class="result-summary">
@@ -198,7 +199,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="export-options">
                     <h3>エクスポート形式</h3>
                     <button id="btn-export-csv" class="btn btn-primary btn-large">
@@ -211,7 +212,7 @@
                         🖼️ 画像をダウンロード
                     </button>
                 </div>
-                
+
                 <div class="export-actions">
                     <button id="btn-new-measurement" class="btn btn-success btn-large">
                         ➕ 新規測定
@@ -226,7 +227,7 @@
         <div class="modal-content">
             <h3>🔶 距離確認</h3>
             <p>カメラと被験者の距離は約 <strong>3m</strong> ですか?</p>
-            
+
             <div class="distance-guide">
                 <p><strong>💡 参考ガイド:</strong></p>
                 <ul>
@@ -235,7 +236,7 @@
                     <li>腕を広げた幅 ≈ 約170cm ≈ 約1.8倍</li>
                 </ul>
             </div>
-            
+
             <div class="modal-buttons">
                 <button class="btn btn-warning distance-option" data-distance="too_close">
                     近すぎる
@@ -260,4 +261,5 @@
     <script src="js/export.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>
