@@ -19,7 +19,7 @@
     <!-- Screen 1: Subject Information -->
     <div id="screen-subject" class="screen active">
         <header class="app-header">
-            <h1>📱 AnkleCapture</h1>
+            <h1>AnkleCapture</h1>
             <p class="subtitle">足関節角度測定システム</p>
         </header>
 
@@ -58,11 +58,11 @@
                     <div class="radio-group">
                         <label class="radio-label">
                             <input type="radio" name="mode" value="realtime" checked>
-                            <span>📱 リアルタイム撮影</span>
+                            <span>リアルタイム撮影</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="mode" value="import">
-                            <span>🖼️ 写真インポート</span>
+                            <span>写真インポート</span>
                         </label>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
                         <label class="mode-option">
                             <input type="radio" name="mode" value="realtime" checked>
                             <div class="mode-card">
-                                <span class="mode-icon">📱</span>
+                                <span class="mode-icon"></span>
                                 <span class="mode-label">実時間撮影</span>
                                 <span class="mode-desc">カメラで撮影</span>
                             </div>
@@ -88,7 +88,7 @@
                         <label class="mode-option">
                             <input type="radio" name="mode" value="import">
                             <div class="mode-card">
-                                <span class="mode-icon">🖼️</span>
+                                <span class="mode-icon"></span>
                                 <span class="mode-label">写真導入</span>
                                 <span class="mode-desc">既存の写真を使用</span>
                             </div>
@@ -97,7 +97,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-large">
-                    📷 測定を開始
+                    測定を開始
                 </button>
             </form>
         </main>
@@ -166,7 +166,7 @@
                         足をガイド枠内に配置してください
                     </p>
                     <button id="btn-step-confirm" class="btn btn-success">
-                        ✓ 確認
+                        確認
                     </button>
                 </div>
             </div>
@@ -175,10 +175,10 @@
         <!-- Capture Button -->
         <div class="camera-controls">
             <div id="distance-warning" class="distance-warning hidden">
-                ⚠️ 距離が適切ではありません
+                距離が適切ではありません
             </div>
             <button id="btn-capture" class="btn btn-capture" disabled>
-                📸 撮影
+                撮影
             </button>
         </div>
     </div>
@@ -195,7 +195,7 @@
         <main class="content">
             <div class="measurement-container">
                 <div class="instruction-card">
-                    <p>📍 3点をタップして角度を測定してください</p>
+                    <p>3点をタップして角度を測定してください</p>
                     <ol id="point-labels">
                         <li>腓骨頭</li>
                         <li>外果</li>
@@ -212,10 +212,10 @@
 
                 <div class="measurement-controls">
                     <button id="btn-reset-points" class="btn btn-secondary">
-                        🔄 リセット
+                        リセット
                     </button>
                     <button id="btn-save-measurement" class="btn btn-primary" disabled>
-                        💾 保存
+                        保存
                     </button>
                 </div>
             </div>
@@ -255,19 +255,19 @@
                 <div class="export-options">
                     <h3>エクスポート形式</h3>
                     <button id="btn-export-csv" class="btn btn-primary btn-large">
-                        📊 CSV形式でダウンロード
+                        CSV形式でダウンロード
                     </button>
                     <button id="btn-export-json" class="btn btn-secondary btn-large">
-                        📄 JSON形式でダウンロード
+                        JSON形式でダウンロード
                     </button>
                     <button id="btn-export-images" class="btn btn-secondary btn-large">
-                        🖼️ 画像をダウンロード
+                        画像をダウンロード
                     </button>
                 </div>
 
                 <div class="export-actions">
                     <button id="btn-new-measurement" class="btn btn-success btn-large">
-                        ➕ 新規測定
+                        新規測定
                     </button>
                 </div>
             </div>
@@ -280,11 +280,11 @@
     <!-- Distance Confirmation Modal -->
     <div id="distance-modal" class="modal hidden">
         <div class="modal-content">
-            <h3>🔶 距離確認</h3>
+            <h3>距離確認</h3>
             <p>カメラと被験者の距離は約 <strong>3m</strong> ですか?</p>
 
             <div class="distance-guide">
-                <p><strong>💡 参考ガイド:</strong></p>
+                <p><strong>参考ガイド:</strong></p>
                 <ul>
                     <li>一般的な床タイル（80cm）≈ 約4枚分</li>
                     <li>畳 1畳の長辺 ≈ 約180cm ≈ 約1.7畳分</li>
@@ -297,7 +297,7 @@
                     近すぎる
                 </button>
                 <button class="btn btn-success distance-option" data-distance="appropriate">
-                    ✓ 適切
+                    適切
                 </button>
                 <button class="btn btn-warning distance-option" data-distance="too_far">
                     遠すぎる
@@ -309,7 +309,7 @@
     <!-- Import Quality Checklist Modal -->
     <div id="import-quality-modal" class="modal hidden">
         <div class="modal-content">
-            <h3>🖼️ 画像品質確認</h3>
+            <h3>画像品質確認</h3>
             <p>インポートした写真が以下の条件を満たしているか確認してください。</p>
 
             <div class="checklist-container">
@@ -336,7 +336,7 @@
                     キャンセル
                 </button>
                 <button class="btn btn-primary" id="btn-confirm-import" disabled>
-                    ✓ 測定へ進む
+                    測定へ進む
                 </button>
             </div>
         </div>
