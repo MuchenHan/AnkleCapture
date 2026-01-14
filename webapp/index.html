@@ -44,11 +44,11 @@
                     <div class="radio-group">
                         <label class="radio-label">
                             <input type="radio" name="side" value="L" checked>
-                            <span>左脚 (L)</span>
+                            <span>左足 (L)</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="side" value="R">
-                            <span>右脚 (R)</span>
+                            <span>右足 (R)</span>
                         </label>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
                 ← 戻る
             </button>
             <div class="header-title">
-                <span id="current-side-display">左脚</span>
+                <span id="current-side-display">左足</span>
             </div>
             <button id="btn-toggle-side" class="btn btn-secondary">
                 左右切替
@@ -107,6 +107,9 @@
         <div id="camera-container" class="camera-container">
             <!-- Video Stream (z-index: 0) -->
             <video id="camera-preview" playsinline muted autoplay></video>
+
+            <!-- Import Preview Canvas (hidden by default, z-index: 0) -->
+            <canvas id="import-preview-canvas" class="hidden"></canvas>
 
             <!-- Canvas for Grid and Lines (z-index: 10) -->
             <canvas id="overlay-canvas"></canvas>
@@ -259,38 +262,6 @@
 
     <!-- Hidden File Input for Import Mode -->
     <input type="file" id="photo-input" accept="image/*" class="hidden">
-
-    <!-- Quality Check Modal for Import Mode -->
-    <div id="quality-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>📋 品質確認</h3>
-            <p>導入した写真が以下の条件を満たしていることを確認してください：</p>
-
-            <div class="quality-checklist">
-                <label class="quality-item">
-                    <input type="checkbox" id="check-angle" required>
-                    <span>撮影視角が垂直である（真横から）</span>
-                </label>
-                <label class="quality-item">
-                    <input type="checkbox" id="check-complete" required>
-                    <span>足部が完整に表示されている（膝下から足先まで）</span>
-                </label>
-                <label class="quality-item">
-                    <input type="checkbox" id="check-distortion" required>
-                    <span>明らかな歪みがない</span>
-                </label>
-            </div>
-
-            <div class="modal-buttons">
-                <button id="btn-quality-cancel" class="btn btn-secondary">
-                    キャンセル
-                </button>
-                <button id="btn-quality-confirm" class="btn btn-success" disabled>
-                    ✓ 確認して続行
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Distance Confirmation Modal -->
     <div id="distance-modal" class="modal hidden">

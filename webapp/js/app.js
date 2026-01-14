@@ -85,7 +85,15 @@ class AnkleCaptureApp {
         // Camera screen buttons
         const btnBackToSubject = document.getElementById('btn-back-to-subject');
         if (btnBackToSubject) {
-            btnBackToSubject.addEventListener('click', () => this.navigateToScreen('subject'));
+            btnBackToSubject.addEventListener('click', () => {
+                // Clean up import mode if active
+                if (this.measurementMode === 'import') {
+                    this.cleanupImportMode();
+                    this.pendingImportCanvas = null;
+                    importManager.reset();
+                }
+                this.navigateToScreen('subject');
+            });
         }
 
         const btnToggleSide = document.getElementById('btn-toggle-side');
@@ -181,24 +189,11 @@ class AnkleCaptureApp {
                 photoInput.value = '';
             });
         }
-
-        // Quality check modal - checkbox listeners
-        const qualityChecks = document.querySelectorAll('.quality-item input[type="checkbox"]');
-        qualityChecks.forEach(checkbox => {
-            checkbox.addEventListener('change', () => this.updateQualityConfirmButton());
-        });
-
-        // Quality modal buttons
-        const btnQualityCancel = document.getElementById('btn-quality-cancel');
-        if (btnQualityCancel) {
-            btnQualityCancel.addEventListener('click', () => this.hideQualityModal());
-        }
-
-        const btnQualityConfirm = document.getElementById('btn-quality-confirm');
-        if (btnQualityConfirm) {
-            btnQualityConfirm.addEventListener('click', () => this.confirmQualityCheck());
-        }
     }
+
+    // Import mode state
+    importStep = 1;
+    importTotalSteps = 3;
 
     /**
      * Handle subject form submission
@@ -277,7 +272,7 @@ class AnkleCaptureApp {
         // Update side display
         const sideDisplay = document.getElementById('current-side-display');
         if (sideDisplay) {
-            sideDisplay.textContent = this.sessionData.side === 'L' ? '左脚' : '右脚';
+            sideDisplay.textContent = this.sessionData.side === 'L' ? '左足' : '右足';
         }
     }
 
@@ -297,7 +292,7 @@ class AnkleCaptureApp {
 
         const sideDisplay = document.getElementById('current-side-display');
         if (sideDisplay) {
-            sideDisplay.textContent = this.sessionData.side === 'L' ? '左脚' : '右脚';
+            sideDisplay.textContent = this.sessionData.side === 'L' ? '左足' : '右足';
         }
 
         this.updateFootGuide();
@@ -442,7 +437,7 @@ class AnkleCaptureApp {
         // Update summary display
         document.getElementById('export-subject-id').textContent = this.sessionData.subject_id;
         document.getElementById('export-side').textContent =
-            this.sessionData.side === 'L' ? '左脚 (L)' : '右脚 (R)';
+            this.sessionData.side === 'L' ? '左足 (L)' : '右足 (R)';
         document.getElementById('export-angle').textContent = this.sessionData.angle_value;
         document.getElementById('export-timestamp').textContent =
             exportManager.formatTimestampForDisplay(this.sessionData.timestamp);
@@ -452,6 +447,9 @@ class AnkleCaptureApp {
      * Start new measurement
      */
     startNewMeasurement() {
+        // Clean up import mode if active
+        this.cleanupImportMode();
+
         // Reset session data
         this.measurementMode = 'realtime';
         this.sessionData = {
@@ -475,6 +473,7 @@ class AnkleCaptureApp {
 
         this.capturedImages = null;
         this.pendingImportCanvas = null;
+        this.importStep = 1;
 
         // Reset import manager
         importManager.reset();
@@ -508,66 +507,219 @@ class AnkleCaptureApp {
     // ========================================
 
     /**
-     * Handle photo import
+     * Get import step instruction
+     */
+    getImportStepInstruction(step) {
+        const instructions = {
+            1: '撮影視角が真横であることを確認',
+            2: '足部が完整に表示されていることを確認（膝下から足先まで）',
+            3: '明らかな歪みがないことを確認'
+        };
+        return instructions[step] || '';
+    }
+
+    /**
+     * Handle photo import - navigate to camera screen with imported photo
      */
     async handlePhotoImport(file) {
         const canvas = await importManager.handleFileSelect(file);
         if (canvas) {
             this.pendingImportCanvas = canvas;
-            this.showQualityModal();
+            // Navigate to camera screen in import mode
+            await this.initImportPreviewScreen();
         }
     }
 
     /**
-     * Show quality check modal
+     * Initialize import preview screen (reuses camera screen)
      */
-    showQualityModal() {
-        const modal = document.getElementById('quality-modal');
-        if (modal) {
-            // Reset checkboxes
-            const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = false);
+    async initImportPreviewScreen() {
+        // Navigate to camera screen
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+        });
+        const cameraScreen = document.getElementById('screen-camera');
+        if (cameraScreen) {
+            cameraScreen.classList.add('active');
+        }
+        this.currentScreen = 'camera';
 
-            // Disable confirm button
-            const confirmBtn = document.getElementById('btn-quality-confirm');
-            if (confirmBtn) confirmBtn.disabled = true;
+        // Add import-mode class to camera container
+        const container = document.getElementById('camera-container');
+        if (container) {
+            container.classList.add('import-mode');
+        }
 
-            modal.classList.remove('hidden');
+        // Hide video, show import preview canvas
+        const video = document.getElementById('camera-preview');
+        const importCanvas = document.getElementById('import-preview-canvas');
+
+        if (video) video.classList.add('hidden');
+        if (importCanvas) {
+            importCanvas.classList.remove('hidden');
+            // Draw imported photo to canvas
+            this.drawImportPreview();
+        }
+
+        // Update side display
+        const sideDisplay = document.getElementById('current-side-display');
+        if (sideDisplay) {
+            sideDisplay.textContent = this.sessionData.side === 'L' ? '左足' : '右足';
+        }
+
+        // Update toggle button to "写真を変更"
+        const toggleBtn = document.getElementById('btn-toggle-side');
+        if (toggleBtn) {
+            toggleBtn.textContent = '写真を変更';
+            toggleBtn.onclick = () => {
+                importManager.triggerFileInput();
+            };
+        }
+
+        // Initialize import step guidance
+        this.importStep = 1;
+        this.updateImportStepUI();
+
+        // Update capture button to "測定に進む"
+        const captureBtn = document.getElementById('btn-capture');
+        if (captureBtn) {
+            captureBtn.textContent = '📐 測定に進む';
+            captureBtn.disabled = true;
+            captureBtn.onclick = () => this.proceedToMeasurementFromImport();
+        }
+
+        // Update step confirm button for import mode
+        const stepConfirmBtn = document.getElementById('btn-step-confirm');
+        if (stepConfirmBtn) {
+            stepConfirmBtn.onclick = () => this.confirmImportStep();
+        }
+
+        // Hide distance warning
+        const distanceWarning = document.getElementById('distance-warning');
+        if (distanceWarning) {
+            distanceWarning.classList.add('hidden');
         }
     }
 
     /**
-     * Hide quality check modal
+     * Draw imported photo to preview canvas
      */
-    hideQualityModal() {
-        const modal = document.getElementById('quality-modal');
-        if (modal) {
-            modal.classList.add('hidden');
+    drawImportPreview() {
+        const importCanvas = document.getElementById('import-preview-canvas');
+        if (!importCanvas || !this.pendingImportCanvas) return;
+
+        const container = document.getElementById('camera-container');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+
+        // Set canvas size to match container
+        importCanvas.width = containerWidth;
+        importCanvas.height = containerHeight;
+
+        const ctx = importCanvas.getContext('2d');
+        const img = this.pendingImportCanvas;
+
+        // Calculate aspect ratio fit
+        const imgAspect = img.width / img.height;
+        const containerAspect = containerWidth / containerHeight;
+
+        let drawWidth, drawHeight, drawX, drawY;
+
+        if (imgAspect > containerAspect) {
+            // Image is wider - fit to width
+            drawWidth = containerWidth;
+            drawHeight = containerWidth / imgAspect;
+            drawX = 0;
+            drawY = (containerHeight - drawHeight) / 2;
+        } else {
+            // Image is taller - fit to height
+            drawHeight = containerHeight;
+            drawWidth = containerHeight * imgAspect;
+            drawX = (containerWidth - drawWidth) / 2;
+            drawY = 0;
         }
-        // Clear pending canvas
-        this.pendingImportCanvas = null;
+
+        // Clear and draw
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, containerWidth, containerHeight);
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
     }
 
     /**
-     * Update quality confirm button state
+     * Update import step UI
      */
-    updateQualityConfirmButton() {
-        const checkboxes = document.querySelectorAll('.quality-item input[type="checkbox"]');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    updateImportStepUI() {
+        const counterEl = document.getElementById('step-counter');
+        const instructionEl = document.getElementById('step-instruction');
+        const confirmBtn = document.getElementById('btn-step-confirm');
+        const captureBtn = document.getElementById('btn-capture');
 
-        const confirmBtn = document.getElementById('btn-quality-confirm');
+        if (counterEl) {
+            counterEl.textContent = `ステップ ${this.importStep}/${this.importTotalSteps}`;
+        }
+
+        if (instructionEl) {
+            instructionEl.textContent = this.getImportStepInstruction(this.importStep);
+        }
+
+        // Update step progress dots (only show 3 for import mode)
+        this.updateImportStepProgressDots();
+
+        // Show/hide confirm button
         if (confirmBtn) {
-            confirmBtn.disabled = !allChecked;
+            confirmBtn.style.display = this.importStep <= this.importTotalSteps ? 'block' : 'none';
+        }
+
+        // Enable capture button only after all steps completed
+        if (captureBtn) {
+            captureBtn.disabled = this.importStep <= this.importTotalSteps;
         }
     }
 
     /**
-     * Confirm quality check and proceed to measurement
+     * Update import step progress dots
      */
-    confirmQualityCheck() {
+    updateImportStepProgressDots() {
+        const dots = document.querySelectorAll('.step-dot');
+        dots.forEach((dot, index) => {
+            const stepNum = index + 1;
+            dot.classList.remove('active', 'completed');
+
+            // Hide step 4 in import mode
+            if (stepNum === 4) {
+                dot.style.display = 'none';
+                return;
+            }
+
+            if (stepNum < this.importStep) {
+                dot.classList.add('completed');
+            } else if (stepNum === this.importStep) {
+                dot.classList.add('active');
+            }
+        });
+    }
+
+    /**
+     * Confirm import step
+     */
+    confirmImportStep() {
+        if (this.importStep < this.importTotalSteps) {
+            this.importStep++;
+            this.updateImportStepUI();
+        } else if (this.importStep === this.importTotalSteps) {
+            // Last step confirmed
+            this.importStep++;
+            this.updateImportStepUI();
+        }
+    }
+
+    /**
+     * Proceed to measurement from import mode
+     */
+    proceedToMeasurementFromImport() {
         if (!this.pendingImportCanvas) return;
 
-        // Set captured images (original = imported, overlay = same for import mode)
+        // Set captured images
         this.capturedImages = {
             original: this.pendingImportCanvas,
             overlay: this.pendingImportCanvas
@@ -576,7 +728,7 @@ class AnkleCaptureApp {
         // Set import mode checklist
         this.sessionData.checklist = importManager.getImportChecklist();
 
-        // Set empty device orientation (not available in import mode)
+        // Set empty device orientation
         this.sessionData.device_orientation = {
             pitch_deg: null,
             roll_deg: null,
@@ -587,11 +739,57 @@ class AnkleCaptureApp {
         // Set timestamp
         this.sessionData.timestamp = this.formatTimestampWithTimezone();
 
-        // Hide modal
-        this.hideQualityModal();
+        // Clean up import mode UI
+        this.cleanupImportMode();
 
         // Navigate to measurement screen
         this.navigateToMeasurementScreen();
+    }
+
+    /**
+     * Clean up import mode UI and restore realtime mode defaults
+     */
+    cleanupImportMode() {
+        const container = document.getElementById('camera-container');
+        if (container) {
+            container.classList.remove('import-mode');
+        }
+
+        const importCanvas = document.getElementById('import-preview-canvas');
+        if (importCanvas) {
+            importCanvas.classList.add('hidden');
+        }
+
+        const video = document.getElementById('camera-preview');
+        if (video) {
+            video.classList.remove('hidden');
+        }
+
+        // Restore toggle button
+        const toggleBtn = document.getElementById('btn-toggle-side');
+        if (toggleBtn) {
+            toggleBtn.textContent = '左右切替';
+            toggleBtn.onclick = () => this.toggleSide();
+        }
+
+        // Restore capture button
+        const captureBtn = document.getElementById('btn-capture');
+        if (captureBtn) {
+            captureBtn.textContent = '📸 撮影';
+            captureBtn.onclick = () => this.handleCapture();
+        }
+
+        // Restore step confirm button
+        const stepConfirmBtn = document.getElementById('btn-step-confirm');
+        if (stepConfirmBtn) {
+            stepConfirmBtn.onclick = () => capture.confirmStep();
+        }
+
+        // Show all step dots
+        const dots = document.querySelectorAll('.step-dot');
+        dots.forEach(dot => {
+            dot.style.display = '';
+        });
     }
 }
 
