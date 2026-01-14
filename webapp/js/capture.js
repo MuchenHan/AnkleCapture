@@ -68,6 +68,9 @@ class CaptureManager {
             instructionEl.textContent = this.getStepInstruction(this.currentStep);
         }
 
+        // Update step progress dots
+        this.updateStepProgressDots();
+
         // Show/hide confirm button for step 4 (distance uses modal)
         if (confirmBtn) {
             confirmBtn.style.display = this.currentStep === 4 ? 'none' : 'block';
@@ -78,6 +81,32 @@ class CaptureManager {
             const allStepsComplete = this.currentStep >= this.totalSteps;
             const distanceConfirmed = this.checklist.distance_confirmed !== null;
             captureBtn.disabled = !(allStepsComplete && distanceConfirmed);
+        }
+    }
+
+    /**
+     * Update step progress dots
+     */
+    updateStepProgressDots() {
+        const dots = document.querySelectorAll('.step-dot');
+        dots.forEach((dot, index) => {
+            const stepNum = index + 1;
+            dot.classList.remove('active', 'completed');
+
+            if (stepNum < this.currentStep) {
+                dot.classList.add('completed');
+            } else if (stepNum === this.currentStep) {
+                dot.classList.add('active');
+            }
+        });
+
+        // Mark step 4 as completed when distance is confirmed
+        if (this.checklist.distance_confirmed !== null) {
+            const dot4 = document.querySelector('.step-dot[data-step="4"]');
+            if (dot4) {
+                dot4.classList.remove('active');
+                dot4.classList.add('completed');
+            }
         }
     }
 
@@ -138,7 +167,24 @@ class CaptureManager {
     setDistanceConfirmation(value) {
         this.checklist.distance_confirmed = value;
         this.hideDistanceModal();
+        this.updateDistanceWarning(value);
         this.updateStepUI();
+    }
+
+    /**
+     * Update distance warning display
+     */
+    updateDistanceWarning(value) {
+        const warningEl = document.getElementById('distance-warning');
+        if (!warningEl) return;
+
+        if (value && value !== 'appropriate') {
+            warningEl.classList.remove('hidden');
+            const warningText = value === 'too_close' ? '⚠️ 距離が近すぎます' : '⚠️ 距離が遠すぎます';
+            warningEl.textContent = warningText;
+        } else {
+            warningEl.classList.add('hidden');
+        }
     }
 
     /**

@@ -90,7 +90,7 @@
     padding: var(--spacing-xs) var(--spacing-sm);
     display: flex;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     gap: var(--spacing-sm);
 }
@@ -128,6 +128,19 @@
 
 .level-marker::after {
     bottom: 4px;
+}
+
+.level-values {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+}
+
+.level-value-item {
+    color: white;
+    font-size: var(--font-size-sm);
+    font-family: monospace;
 }
 
 .level-text {
@@ -170,12 +183,12 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 40;
-    width: auto;
-    max-width: 320px;
+    width: 90%;
+    max-width: 500px;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     border-radius: var(--border-radius-lg);
-    padding: var(--spacing-sm);
+    padding: var(--spacing-md);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
     box-shadow: var(--shadow-lg);
 }
@@ -183,6 +196,48 @@
 .step-header {
     text-align: center;
     margin-bottom: var(--spacing-sm);
+}
+
+/* Step Progress Dots */
+.step-progress {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.step-dot.active {
+    background: var(--primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+.step-dot.completed {
+    background: var(--success);
+    color: white;
+}
+
+.step-dot.completed span {
+    display: none;
+}
+
+.step-dot.completed::after {
+    content: '✓';
+    font-size: var(--font-size-sm);
 }
 
 #step-counter {
@@ -215,8 +270,26 @@
     background: var(--neutral-900);
     padding: var(--spacing-md);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* Distance Warning */
+.distance-warning {
+    background: var(--warning);
+    color: var(--neutral-900);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    animation: pulse-warning 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 .btn-capture {

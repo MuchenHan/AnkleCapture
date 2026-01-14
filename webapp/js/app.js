@@ -6,6 +6,7 @@
 class AnkleCaptureApp {
     constructor() {
         this.currentScreen = 'subject';
+        this.measurementMode = 'realtime'; // 'realtime' or 'import'
         this.sessionData = {
             session_id: null,
             subject_id: '',
@@ -14,6 +15,7 @@ class AnkleCaptureApp {
             posture: 'sitting',
             distance_m: 3.0,
             measurement_type: 'ankle_dorsiflexion',
+            mode: 'realtime', // Add mode field
             checklist: {},
             device_orientation: {},
             points: [],
@@ -24,6 +26,7 @@ class AnkleCaptureApp {
             overlay_photo: ''
         };
         this.capturedImages = null;
+        this.pendingImportCanvas = null; // For import mode
     }
 
     /**
@@ -157,6 +160,44 @@ class AnkleCaptureApp {
         if (btnNewMeasurement) {
             btnNewMeasurement.addEventListener('click', () => this.startNewMeasurement());
         }
+
+        // Import mode event listeners
+        this.setupImportEventListeners();
+    }
+
+    /**
+     * Setup import mode event listeners
+     */
+    setupImportEventListeners() {
+        // File input change
+        const photoInput = document.getElementById('photo-input');
+        if (photoInput) {
+            photoInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await this.handlePhotoImport(file);
+                }
+                // Reset input to allow re-selecting same file
+                photoInput.value = '';
+            });
+        }
+
+        // Quality check modal - checkbox listeners
+        const qualityChecks = document.querySelectorAll('.quality-item input[type="checkbox"]');
+        qualityChecks.forEach(checkbox => {
+            checkbox.addEventListener('change', () => this.updateQualityConfirmButton());
+        });
+
+        // Quality modal buttons
+        const btnQualityCancel = document.getElementById('btn-quality-cancel');
+        if (btnQualityCancel) {
+            btnQualityCancel.addEventListener('click', () => this.hideQualityModal());
+        }
+
+        const btnQualityConfirm = document.getElementById('btn-quality-confirm');
+        if (btnQualityConfirm) {
+            btnQualityConfirm.addEventListener('click', () => this.confirmQualityCheck());
+        }
     }
 
     /**
@@ -170,8 +211,19 @@ class AnkleCaptureApp {
         this.sessionData.measurement_type = document.getElementById('measurement-type').value;
         this.sessionData.session_id = storage.generateSessionId();
 
-        // Navigate to camera screen
-        await this.navigateToScreen('camera');
+        // Get measurement mode
+        const modeInput = document.querySelector('input[name="mode"]:checked');
+        this.measurementMode = modeInput ? modeInput.value : 'realtime';
+        this.sessionData.mode = this.measurementMode;
+
+        // Handle based on mode
+        if (this.measurementMode === 'import') {
+            // Trigger file input for import mode
+            importManager.triggerFileInput();
+        } else {
+            // Navigate to camera screen for realtime mode
+            await this.navigateToScreen('camera');
+        }
     }
 
     /**
@@ -286,8 +338,18 @@ class AnkleCaptureApp {
         const indicator = document.getElementById('level-indicator');
         const textEl = document.getElementById('level-text');
         const markerEl = document.getElementById('roll-marker');
+        const pitchValueEl = document.getElementById('pitch-value');
+        const rollValueEl = document.getElementById('roll-value');
 
         if (!indicator || !textEl) return;
+
+        // Update numeric values display
+        if (pitchValueEl && data.pitch_deg !== null) {
+            pitchValueEl.textContent = data.pitch_deg.toFixed(1);
+        }
+        if (rollValueEl && data.roll_deg !== null) {
+            rollValueEl.textContent = data.roll_deg.toFixed(1);
+        }
 
         if (data.is_level) {
             indicator.className = 'level-indicator level-ok';
@@ -327,8 +389,8 @@ class AnkleCaptureApp {
         // Save orientation data
         this.sessionData.device_orientation = orientation.getCurrentOrientation();
 
-        // Set timestamp
-        this.sessionData.timestamp = new Date().toISOString();
+        // Set timestamp with timezone
+        this.sessionData.timestamp = this.formatTimestampWithTimezone();
 
         // Navigate to measurement screen
         this.navigateToMeasurementScreen();
@@ -391,6 +453,7 @@ class AnkleCaptureApp {
      */
     startNewMeasurement() {
         // Reset session data
+        this.measurementMode = 'realtime';
         this.sessionData = {
             session_id: null,
             subject_id: '',
@@ -399,6 +462,7 @@ class AnkleCaptureApp {
             posture: 'sitting',
             distance_m: 3.0,
             measurement_type: 'ankle_dorsiflexion',
+            mode: 'realtime',
             checklist: {},
             device_orientation: {},
             points: [],
@@ -410,6 +474,10 @@ class AnkleCaptureApp {
         };
 
         this.capturedImages = null;
+        this.pendingImportCanvas = null;
+
+        // Reset import manager
+        importManager.reset();
 
         // Navigate to subject screen
         this.navigateToScreen('subject');
@@ -420,6 +488,110 @@ class AnkleCaptureApp {
      */
     getDeviceInfo() {
         return `${navigator.userAgent}`;
+    }
+
+    /**
+     * Format timestamp with timezone (ISO 8601)
+     * Returns format: 2026-01-14T14:32:15+09:00
+     */
+    formatTimestampWithTimezone() {
+        const now = new Date();
+        const offset = -now.getTimezoneOffset();
+        const sign = offset >= 0 ? '+' : '-';
+        const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+        const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
+        return now.toISOString().slice(0, 19) + sign + hours + ':' + minutes;
+    }
+
+    // ========================================
+    // Import Mode Methods
+    // ========================================
+
+    /**
+     * Handle photo import
+     */
+    async handlePhotoImport(file) {
+        const canvas = await importManager.handleFileSelect(file);
+        if (canvas) {
+            this.pendingImportCanvas = canvas;
+            this.showQualityModal();
+        }
+    }
+
+    /**
+     * Show quality check modal
+     */
+    showQualityModal() {
+        const modal = document.getElementById('quality-modal');
+        if (modal) {
+            // Reset checkboxes
+            const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+
+            // Disable confirm button
+            const confirmBtn = document.getElementById('btn-quality-confirm');
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            modal.classList.remove('hidden');
+        }
+    }
+
+    /**
+     * Hide quality check modal
+     */
+    hideQualityModal() {
+        const modal = document.getElementById('quality-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        // Clear pending canvas
+        this.pendingImportCanvas = null;
+    }
+
+    /**
+     * Update quality confirm button state
+     */
+    updateQualityConfirmButton() {
+        const checkboxes = document.querySelectorAll('.quality-item input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+        const confirmBtn = document.getElementById('btn-quality-confirm');
+        if (confirmBtn) {
+            confirmBtn.disabled = !allChecked;
+        }
+    }
+
+    /**
+     * Confirm quality check and proceed to measurement
+     */
+    confirmQualityCheck() {
+        if (!this.pendingImportCanvas) return;
+
+        // Set captured images (original = imported, overlay = same for import mode)
+        this.capturedImages = {
+            original: this.pendingImportCanvas,
+            overlay: this.pendingImportCanvas
+        };
+
+        // Set import mode checklist
+        this.sessionData.checklist = importManager.getImportChecklist();
+
+        // Set empty device orientation (not available in import mode)
+        this.sessionData.device_orientation = {
+            pitch_deg: null,
+            roll_deg: null,
+            is_level: null,
+            level_tolerance_deg: 5.0
+        };
+
+        // Set timestamp
+        this.sessionData.timestamp = this.formatTimestampWithTimezone();
+
+        // Hide modal
+        this.hideQualityModal();
+
+        // Navigate to measurement screen
+        this.navigateToMeasurementScreen();
     }
 }
 

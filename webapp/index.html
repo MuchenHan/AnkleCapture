@@ -60,8 +60,30 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label>測定モード *</label>
+                    <div class="mode-selector">
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="realtime" checked>
+                            <div class="mode-card">
+                                <span class="mode-icon">📱</span>
+                                <span class="mode-label">実時間撮影</span>
+                                <span class="mode-desc">カメラで撮影</span>
+                            </div>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="import">
+                            <div class="mode-card">
+                                <span class="mode-icon">🖼️</span>
+                                <span class="mode-label">写真導入</span>
+                                <span class="mode-desc">既存の写真を使用</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-primary btn-large">
-                    📷 撮影を開始
+                    📷 測定を開始
                 </button>
             </form>
         </main>
@@ -100,6 +122,10 @@
                     <div class="level-bar">
                         <div class="level-marker" id="roll-marker"></div>
                     </div>
+                    <div class="level-values" id="level-values">
+                        <span class="level-value-item">Pitch: <span id="pitch-value">--</span>°</span>
+                        <span class="level-value-item">Roll: <span id="roll-value">--</span>°</span>
+                    </div>
                     <div class="level-text" id="level-text">水平仪を有効化</div>
                     <button id="btn-enable-orientation" class="btn btn-small">
                         有効化
@@ -110,6 +136,12 @@
             <!-- Step Guidance (z-index: 40) -->
             <div id="step-guidance" class="step-guidance">
                 <div class="step-header">
+                    <div class="step-progress">
+                        <div class="step-dot" data-step="1"><span>1</span></div>
+                        <div class="step-dot" data-step="2"><span>2</span></div>
+                        <div class="step-dot" data-step="3"><span>3</span></div>
+                        <div class="step-dot" data-step="4"><span>4</span></div>
+                    </div>
                     <span id="step-counter">ステップ 1/4</span>
                 </div>
                 <div class="step-content">
@@ -125,6 +157,9 @@
 
         <!-- Capture Button -->
         <div class="camera-controls">
+            <div id="distance-warning" class="distance-warning hidden">
+                ⚠️ 距離が適切ではありません
+            </div>
             <button id="btn-capture" class="btn btn-capture" disabled>
                 📸 撮影
             </button>
@@ -222,6 +257,41 @@
         </main>
     </div>
 
+    <!-- Hidden File Input for Import Mode -->
+    <input type="file" id="photo-input" accept="image/*" class="hidden">
+
+    <!-- Quality Check Modal for Import Mode -->
+    <div id="quality-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>📋 品質確認</h3>
+            <p>導入した写真が以下の条件を満たしていることを確認してください：</p>
+
+            <div class="quality-checklist">
+                <label class="quality-item">
+                    <input type="checkbox" id="check-angle" required>
+                    <span>撮影視角が垂直である（真横から）</span>
+                </label>
+                <label class="quality-item">
+                    <input type="checkbox" id="check-complete" required>
+                    <span>足部が完整に表示されている（膝下から足先まで）</span>
+                </label>
+                <label class="quality-item">
+                    <input type="checkbox" id="check-distortion" required>
+                    <span>明らかな歪みがない</span>
+                </label>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="btn-quality-cancel" class="btn btn-secondary">
+                    キャンセル
+                </button>
+                <button id="btn-quality-confirm" class="btn btn-success" disabled>
+                    ✓ 確認して続行
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Distance Confirmation Modal -->
     <div id="distance-modal" class="modal hidden">
         <div class="modal-content">
@@ -259,6 +329,7 @@
     <script src="js/capture.js"></script>
     <script src="js/measurement.js"></script>
     <script src="js/export.js"></script>
+    <script src="js/import.js"></script>
     <script src="js/app.js"></script>
 </body>
 
