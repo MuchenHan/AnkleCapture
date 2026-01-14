@@ -44,11 +44,11 @@
                     <div class="radio-group">
                         <label class="radio-label">
                             <input type="radio" name="side" value="L" checked>
-                            <span>左脚 (L)</span>
+                            <span>左足 (L)</span>
                         </label>
                         <label class="radio-label">
                             <input type="radio" name="side" value="R">
-                            <span>右脚 (R)</span>
+                            <span>右足 (R)</span>
                         </label>
                     </div>
                 </div>
@@ -74,10 +74,29 @@
                     </select>
                 </div>
 
-                <!-- Hidden file input -->
-                <input type="file" id="file-input" accept="image/*" style="display: none;">
+                <div class="form-group">
+                    <label>測定モード *</label>
+                    <div class="mode-selector">
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="realtime" checked>
+                            <div class="mode-card">
+                                <span class="mode-icon">📱</span>
+                                <span class="mode-label">実時間撮影</span>
+                                <span class="mode-desc">カメラで撮影</span>
+                            </div>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="import">
+                            <div class="mode-card">
+                                <span class="mode-icon">🖼️</span>
+                                <span class="mode-label">写真導入</span>
+                                <span class="mode-desc">既存の写真を使用</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
 
-                <button type="submit" class="btn btn-primary btn-large" id="btn-start-measurement">
+                <button type="submit" class="btn btn-primary btn-large">
                     📷 測定を開始
                 </button>
             </form>
@@ -91,7 +110,7 @@
                 ← 戻る
             </button>
             <div class="header-title">
-                <span id="current-side-display">左脚</span>
+                <span id="current-side-display">左足</span>
             </div>
             <button id="btn-toggle-side" class="btn btn-secondary">
                 左右切替
@@ -102,6 +121,9 @@
         <div id="camera-container" class="camera-container">
             <!-- Video Stream (z-index: 0) -->
             <video id="camera-preview" playsinline muted autoplay></video>
+
+            <!-- Import Preview Canvas (hidden by default, z-index: 0) -->
+            <canvas id="import-preview-canvas" class="hidden"></canvas>
 
             <!-- Canvas for Grid and Lines (z-index: 10) -->
             <canvas id="overlay-canvas"></canvas>
@@ -117,6 +139,10 @@
                     <div class="level-bar">
                         <div class="level-marker" id="roll-marker"></div>
                     </div>
+                    <div class="level-values" id="level-values">
+                        <span class="level-value-item">Pitch: <span id="pitch-value">--</span>°</span>
+                        <span class="level-value-item">Roll: <span id="roll-value">--</span>°</span>
+                    </div>
                     <div class="level-text" id="level-text">水平仪を有効化</div>
                     <button id="btn-enable-orientation" class="btn btn-small">
                         有効化
@@ -127,6 +153,12 @@
             <!-- Step Guidance (z-index: 40) -->
             <div id="step-guidance" class="step-guidance">
                 <div class="step-header">
+                    <div class="step-progress">
+                        <div class="step-dot" data-step="1"><span>1</span></div>
+                        <div class="step-dot" data-step="2"><span>2</span></div>
+                        <div class="step-dot" data-step="3"><span>3</span></div>
+                        <div class="step-dot" data-step="4"><span>4</span></div>
+                    </div>
                     <span id="step-counter">ステップ 1/4</span>
                 </div>
                 <div class="step-content">
@@ -142,6 +174,9 @@
 
         <!-- Capture Button -->
         <div class="camera-controls">
+            <div id="distance-warning" class="distance-warning hidden">
+                ⚠️ 距離が適切ではありません
+            </div>
             <button id="btn-capture" class="btn btn-capture" disabled>
                 📸 撮影
             </button>
@@ -239,6 +274,9 @@
         </main>
     </div>
 
+    <!-- Hidden File Input for Import Mode -->
+    <input type="file" id="photo-input" accept="image/*" class="hidden">
+
     <!-- Distance Confirmation Modal -->
     <div id="distance-modal" class="modal hidden">
         <div class="modal-content">
@@ -313,6 +351,7 @@
     <script src="js/import.js"></script>
     <script src="js/measurement.js"></script>
     <script src="js/export.js"></script>
+
     <script src="js/app.js"></script>
 </body>
 

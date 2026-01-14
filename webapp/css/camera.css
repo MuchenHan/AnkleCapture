@@ -53,6 +53,29 @@
     pointer-events: none;
 }
 
+/* Import Preview Canvas (z-index: 0, same layer as video) */
+#import-preview-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 0;
+    background: black;
+}
+
+/* Import Mode - hide realtime elements */
+.camera-container.import-mode #camera-preview,
+.camera-container.import-mode .foot-guide-container,
+.camera-container.import-mode .level-indicator-container {
+    display: none !important;
+}
+
+.camera-container.import-mode #import-preview-canvas {
+    display: block;
+}
+
 /* Foot Guide Container (z-index: 20) */
 .foot-guide-container {
     position: absolute;
@@ -72,13 +95,13 @@
     filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.5));
 }
 
-/* Level Indicator Container (z-index: 35) */
+/* Level Indicator Container (z-index: 45 - above step guidance) */
 .level-indicator-container {
     position: absolute;
     top: var(--spacing-xs);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 35;
+    left: var(--spacing-sm);
+    transform: none;
+    z-index: 45;
     width: auto;
     max-width: 200px;
 }
@@ -90,7 +113,7 @@
     padding: var(--spacing-xs) var(--spacing-sm);
     display: flex;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     gap: var(--spacing-sm);
 }
@@ -130,11 +153,37 @@
     bottom: 4px;
 }
 
+.level-values {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+}
+
+.level-value-item {
+    color: white;
+    font-size: var(--font-size-sm);
+    font-family: monospace;
+}
+
 .level-text {
     color: white;
     font-weight: 600;
     font-size: var(--font-size-sm);
     text-align: center;
+}
+
+/* Enable orientation button styling */
+#btn-enable-orientation {
+    background: var(--success);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    margin-top: var(--spacing-xs);
 }
 
 .level-indicator.level-ok .level-text {
@@ -163,43 +212,88 @@
     background: var(--danger);
 }
 
-/* Step Guidance (z-index: 40) */
+/* Step Guidance (z-index: 40) - Positioned at top */
 .step-guidance {
     position: absolute;
-    bottom: 80px;
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 40;
-    width: auto;
-    max-width: 320px;
-    background: rgba(0, 0, 0, 0.5);
+    width: 95%;
+    max-width: 500px;
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs) var(--spacing-sm);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
 }
 
 .step-header {
-    text-align: center;
-    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Step Progress Dots */
+.step-progress {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-xs);
+}
+
+.step-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.step-dot.active {
+    background: var(--primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+.step-dot.completed {
+    background: var(--success);
+    color: white;
+}
+
+.step-dot.completed span {
+    display: none;
+}
+
+.step-dot.completed::after {
+    content: '✓';
+    font-size: var(--font-size-xs);
 }
 
 #step-counter {
     display: inline-block;
     background: var(--primary);
     color: white;
-    padding: 0.375rem 1rem;
+    padding: 0.25rem 0.75rem;
     border-radius: var(--border-radius);
     font-weight: 600;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
 }
 
 .step-content {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: var(--spacing-sm);
     align-items: center;
+    justify-content: center;
 }
 
 .step-instruction {
@@ -208,6 +302,13 @@
     font-weight: 500;
     text-align: center;
     line-height: 1.3;
+    margin: 0;
+}
+
+.step-content .btn-success {
+    padding: 0.375rem 0.75rem;
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
 }
 
 /* Camera Controls */
@@ -215,8 +316,26 @@
     background: var(--neutral-900);
     padding: var(--spacing-md);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* Distance Warning */
+.distance-warning {
+    background: var(--warning);
+    color: var(--neutral-900);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    animation: pulse-warning 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 .btn-capture {
@@ -249,13 +368,13 @@
     }
 
     .step-guidance {
-        bottom: 80px;
-        width: 95%;
-        padding: var(--spacing-sm);
+        top: 65px;
+        width: 98%;
+        padding: var(--spacing-xs);
     }
 
     .step-instruction {
-        font-size: var(--font-size-base);
+        font-size: var(--font-size-sm);
     }
 
     .btn-capture {
@@ -268,7 +387,7 @@
 /* Landscape Orientation */
 @media (orientation: landscape) {
     .step-guidance {
-        bottom: var(--spacing-sm);
+        top: 60px;
         max-width: 400px;
     }
 

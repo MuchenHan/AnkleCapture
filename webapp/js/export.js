@@ -37,8 +37,7 @@ class ExportManager {
             'subject_id',
             'operator_id',
             'side',
-            'posture',
-            'distance_m',
+            'mode',
             'measurement_type',
             'foot_in_frame',
             'heel_on_ground',
@@ -67,16 +66,15 @@ class ExportManager {
             data.subject_id,
             data.operator_id || '',
             data.side,
-            data.posture,
-            data.distance_m,
+            data.mode || 'realtime',
             data.measurement_type,
             data.checklist.foot_in_frame,
             data.checklist.heel_on_ground,
             data.checklist.foot_flat,
             data.checklist.distance_confirmed || '',
-            data.device_orientation?.pitch_deg || '',
-            data.device_orientation?.roll_deg || '',
-            data.device_orientation?.is_level || '',
+            data.device_orientation?.pitch_deg ?? '',
+            data.device_orientation?.roll_deg ?? '',
+            data.device_orientation?.is_level ?? '',
             data.points[0]?.label || '',
             data.points[0]?.x || '',
             data.points[0]?.y || '',
@@ -103,7 +101,8 @@ class ExportManager {
     }
 
     /**
-     * Export as JSON
+     * Export as JSON (paper-standard format)
+     * Only includes fields specified in the paper
      */
     exportJSON(data = this.currentData) {
         if (!data) {
@@ -111,7 +110,27 @@ class ExportManager {
             return;
         }
 
-        const jsonContent = JSON.stringify(data, null, 2);
+        // Paper-standard format: only 11 fields
+        const standardFormat = {
+            session_id: data.session_id,
+            subject_id: data.subject_id,
+            operator_id: data.operator_id,
+            side: data.side,
+            measurement_type: data.measurement_type,
+            checklist: data.checklist,
+            device_orientation: data.device_orientation,
+            points: data.points,
+            angle_value: data.angle_value,
+            timestamp: data.timestamp,
+            device_info: data.device_info
+        };
+
+        // Add mode field if present (for import mode)
+        if (data.mode) {
+            standardFormat.mode = data.mode;
+        }
+
+        const jsonContent = JSON.stringify(standardFormat, null, 2);
         const filename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.json`;
         this.downloadFile(jsonContent, filename, 'application/json');
     }

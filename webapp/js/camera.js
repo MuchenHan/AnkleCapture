@@ -16,9 +16,10 @@ class CameraManager {
     async init(videoElement) {
         this.video = videoElement;
 
+        // First try rear camera, then fallback to any camera
         const constraints = {
             video: {
-                facingMode: { ideal: 'environment' }, // Rear camera
+                facingMode: { ideal: 'environment' },
                 width: { ideal: 1920 },
                 height: { ideal: 1080 }
             },
@@ -26,19 +27,45 @@ class CameraManager {
         };
 
         try {
+            console.log('Requesting camera access...');
             this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log('Camera stream obtained:', this.stream);
+
             this.video.srcObject = this.stream;
 
+            // Ensure video plays
+            this.video.setAttribute('playsinline', 'true');
+            this.video.setAttribute('muted', 'true');
+            this.video.setAttribute('autoplay', 'true');
+
             // Wait for video to be ready
-            await new Promise((resolve) => {
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Video metadata timeout'));
+                }, 10000);
+
                 this.video.onloadedmetadata = () => {
-                    this.video.play();
-                    resolve();
+                    clearTimeout(timeout);
+                    console.log('Video metadata loaded, dimensions:', this.video.videoWidth, 'x', this.video.videoHeight);
+                    this.video.play()
+                        .then(() => {
+                            console.log('Video playing');
+                            resolve();
+                        })
+                        .catch(err => {
+                            console.error('Video play error:', err);
+                            resolve(); // Still resolve, autoplay might work
+                        });
+                };
+
+                this.video.onerror = (err) => {
+                    clearTimeout(timeout);
+                    reject(err);
                 };
             });
 
             this.isInitialized = true;
-            console.log('Camera initialized');
+            console.log('Camera initialized successfully');
             return true;
 
         } catch (error) {
@@ -53,6 +80,19 @@ class CameraManager {
                 message = 'カメラが見つかりませんでした。';
             } else if (error.name === 'NotReadableError') {
                 message = 'カメラは他のアプリケーションで使用中です。';
+            } else if (error.name === 'OverconstrainedError') {
+                // Try again with simpler constraints
+                console.log('Retrying with simpler constraints...');
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    this.video.srcObject = this.stream;
+                    await this.video.play();
+                    this.isInitialized = true;
+                    return true;
+                } catch (retryError) {
+                    console.error('Retry failed:', retryError);
+                    message = 'カメラの初期化に失敗しました。';
+                }
             }
 
             alert(message);
