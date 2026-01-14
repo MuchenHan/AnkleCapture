@@ -24,3 +24,13 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Research and Non-Webapp files
+.agent/
+Results/
+attachment/
+data/
+figures/
+manuscripts/
+reference/
+scripts/

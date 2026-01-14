@@ -11,6 +11,7 @@ class AnkleCaptureApp {
             subject_id: '',
             operator_id: '',
             side: 'L',
+            mode: 'realtime', // 'realtime' or 'import'
             posture: 'sitting',
             distance_m: 3.0,
             measurement_type: 'ankle_dorsiflexion',
@@ -55,6 +56,19 @@ class AnkleCaptureApp {
             await storage.init();
         } catch (error) {
             console.error('Storage initialization failed:', error);
+        }
+
+
+
+        // Initialize import manager
+        if (window.importManager) {
+            importManager.init();
+
+            // Listen for file selection
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => importManager.handleFileSelect(e));
+            }
         }
 
         // Set up event listeners
@@ -167,11 +181,41 @@ class AnkleCaptureApp {
         this.sessionData.subject_id = document.getElementById('subject-id').value;
         this.sessionData.operator_id = document.getElementById('operator-id').value;
         this.sessionData.side = document.querySelector('input[name="side"]:checked').value;
+
+        // Get mode
+        const modeEl = document.querySelector('input[name="mode"]:checked');
+        this.sessionData.mode = modeEl ? modeEl.value : 'realtime';
+
         this.sessionData.measurement_type = document.getElementById('measurement-type').value;
         this.sessionData.session_id = storage.generateSessionId();
 
-        // Navigate to camera screen
-        await this.navigateToScreen('camera');
+        // Handle based on mode
+        if (this.sessionData.mode === 'import') {
+            // Trigger file selection
+            importManager.selectFile();
+        } else {
+            // Navigate to camera screen (Real-time)
+            await this.navigateToScreen('camera');
+        }
+    }
+
+    /**
+     * Handle completed import (called from ImportManager)
+     */
+    handleImportComplete(imageCanvas, checklist) {
+        // Save checklist
+        this.sessionData.checklist = checklist;
+
+        // Store image
+        this.capturedImages = {
+            original: imageCanvas,
+            overlay: imageCanvas // For import, overlay is same as original initially
+        };
+
+        this.sessionData.timestamp = new Date().toISOString();
+
+        // Go to measurement
+        this.navigateToMeasurementScreen();
     }
 
     /**
@@ -396,6 +440,7 @@ class AnkleCaptureApp {
             subject_id: '',
             operator_id: '',
             side: 'L',
+            mode: 'realtime',
             posture: 'sitting',
             distance_m: 3.0,
             measurement_type: 'ankle_dorsiflexion',
