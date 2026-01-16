@@ -16,12 +16,18 @@ class ImportManager {
             no_distortion: false
         };
         this.importedImage = null;
+        this.isInitialized = false; // Track initialization state
     }
 
     /**
      * Initialize import manager
      */
     init() {
+        // Prevent double initialization
+        if (this.isInitialized) {
+            return;
+        }
+
         // Fixed: Use correct ID 'file-input' (matches HTML)
         this.fileInput = document.getElementById('file-input');
         this.previewCanvas = document.getElementById('modal-preview-canvas');
@@ -53,6 +59,7 @@ class ImportManager {
             btnConfirm.addEventListener('click', () => this.confirmImport());
         }
 
+        this.isInitialized = true;
         console.log('ImportManager initialized');
     }
 
@@ -60,11 +67,17 @@ class ImportManager {
      * Trigger file selection
      */
     selectFile() {
+        // Auto-initialize if not already done
+        if (!this.isInitialized) {
+            console.log('ImportManager: Auto-initializing on selectFile()');
+            this.init();
+        }
+
         if (this.fileInput) {
             this.fileInput.click();
         } else {
-            console.error('File input not initialized');
-            alert('ファイル入力が初期化されていません');
+            console.error('File input not initialized - element not found in DOM');
+            alert('ファイル入力要素が見つかりません。ページを再読み込みしてください。');
         }
     }
 
