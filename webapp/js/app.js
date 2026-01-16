@@ -639,8 +639,8 @@ class AnkleCaptureApp {
 }
 
 // Initialize app when DOM is ready
-let app;
+// Make app globally accessible via window.app
 document.addEventListener('DOMContentLoaded', async () => {
-    app = new AnkleCaptureApp();
-    await app.init();
+    window.app = new AnkleCaptureApp();
+    await window.app.init();
 });
