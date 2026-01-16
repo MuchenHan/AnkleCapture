@@ -46,7 +46,13 @@ class ImportManager {
         checks.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('change', () => this.validateChecklist());
+                console.log('Adding change listener to checkbox:', id);
+                el.addEventListener('change', () => {
+                    console.log('Checkbox changed:', id, 'checked:', el.checked);
+                    this.validateChecklist();
+                });
+            } else {
+                console.error('Checkbox not found:', id);
             }
         });
 
@@ -361,7 +367,13 @@ class ImportManager {
     confirmImport() {
         console.log('confirmImport called');
         console.log('importedImage:', this.importedImage);
+        console.log('importedImage dimensions:', this.importedImage?.width, 'x', this.importedImage?.height);
         console.log('checklist:', this.checklist);
+
+        if (!this.importedImage) {
+            alert('エラー: 画像が読み込まれていません');
+            return;
+        }
 
         this.hideModal();
 
@@ -371,6 +383,7 @@ class ImportManager {
             window.app.handleImportComplete(this.importedImage, this.checklist);
         } else {
             console.error('window.app not found!');
+            alert('エラー: アプリが初期化されていません');
         }
     }
 
