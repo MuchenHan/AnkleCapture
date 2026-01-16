@@ -33,6 +33,33 @@ class ExportManager {
     }
 
     /**
+     * Get normalized fidelity data from checklist (handles both import and realtime formats)
+     */
+    getNormalizedFidelity(checklist) {
+        if (!checklist) {
+            return { check1: 'No', check2: 'No', check3: 'No', check4: 'No' };
+        }
+
+        // Import mode format: side_view, whole_foot, no_distortion, distance_ok
+        if ('side_view' in checklist) {
+            return {
+                check1: checklist.side_view ? 'Yes' : 'No',
+                check2: checklist.whole_foot ? 'Yes' : 'No',
+                check3: checklist.no_distortion ? 'Yes' : 'No',
+                check4: checklist.distance_ok ? 'Yes' : 'No'
+            };
+        }
+
+        // Realtime mode format: foot_in_frame, heel_on_ground, foot_flat, distance_confirmed
+        return {
+            check1: checklist.foot_in_frame ? 'Yes' : 'No',
+            check2: checklist.heel_on_ground ? 'Yes' : 'No',
+            check3: checklist.foot_flat ? 'Yes' : 'No',
+            check4: checklist.distance_confirmed === 'appropriate' ? 'Yes' : 'No'
+        };
+    }
+
+    /**
      * Export all measurements as CSV
      */
     exportCSV() {
@@ -41,10 +68,11 @@ class ExportManager {
             return;
         }
 
-        // Get checklist fidelity data
-        const checklist = this.sessionData.checklist || {};
+        // Get normalized fidelity data (handles both import and realtime modes)
+        const fidelity = this.getNormalizedFidelity(this.sessionData.checklist);
+        const isImportMode = this.sessionData.mode === 'import';
 
-        // CSV header (including fidelity checklist)
+        // CSV header (fidelity column names depend on mode)
         const headers = [
             'session_id',
             'subject_id',
@@ -63,9 +91,9 @@ class ExportManager {
             'point3_x',
             'point3_y',
             'angle_value',
-            'fidelity_side_view',
-            'fidelity_whole_foot',
-            'fidelity_no_distortion',
+            isImportMode ? 'fidelity_side_view' : 'fidelity_foot_in_frame',
+            isImportMode ? 'fidelity_whole_foot' : 'fidelity_heel_on_ground',
+            isImportMode ? 'fidelity_no_distortion' : 'fidelity_foot_flat',
             'fidelity_distance_ok',
             'timestamp',
             'device_info'
@@ -91,10 +119,10 @@ class ExportManager {
                 m.points[2]?.x || '',
                 m.points[2]?.y || '',
                 m.angle_value,
-                checklist.side_view ? 'Yes' : 'No',
-                checklist.whole_foot ? 'Yes' : 'No',
-                checklist.no_distortion ? 'Yes' : 'No',
-                checklist.distance_ok ? 'Yes' : 'No',
+                fidelity.check1,
+                fidelity.check2,
+                fidelity.check3,
+                fidelity.check4,
                 m.timestamp || this.sessionData.timestamp,
                 this.sessionData.device_info
             ];
@@ -315,14 +343,18 @@ class ExportManager {
             const files = [];
             const baseFilename = `${this.sanitizeFilename(this.sessionData.subject_id)}_${this.sessionData.side}_${this.formatTimestampForFilename(this.sessionData.timestamp)}`;
 
-            // Create CSV file
-            const checklist = this.sessionData.checklist || {};
+            // Create CSV file with normalized fidelity data
+            const fidelity = this.getNormalizedFidelity(this.sessionData.checklist);
+            const isImportMode = this.sessionData.mode === 'import';
             const csvHeaders = [
                 'session_id', 'subject_id', 'operator_id', 'side', 'mode', 'measurement_type',
                 'measurement_num', 'point1_label', 'point1_x', 'point1_y',
                 'point2_label', 'point2_x', 'point2_y', 'point3_label', 'point3_x', 'point3_y',
-                'angle_value', 'fidelity_side_view', 'fidelity_whole_foot',
-                'fidelity_no_distortion', 'fidelity_distance_ok', 'timestamp', 'device_info'
+                'angle_value',
+                isImportMode ? 'fidelity_side_view' : 'fidelity_foot_in_frame',
+                isImportMode ? 'fidelity_whole_foot' : 'fidelity_heel_on_ground',
+                isImportMode ? 'fidelity_no_distortion' : 'fidelity_foot_flat',
+                'fidelity_distance_ok', 'timestamp', 'device_info'
             ];
             const csvRows = this.measurements.map((m, index) => [
                 this.sessionData.session_id, this.sessionData.subject_id,
@@ -331,9 +363,7 @@ class ExportManager {
                 index + 1, m.points[0]?.label || '', m.points[0]?.x || '', m.points[0]?.y || '',
                 m.points[1]?.label || '', m.points[1]?.x || '', m.points[1]?.y || '',
                 m.points[2]?.label || '', m.points[2]?.x || '', m.points[2]?.y || '',
-                m.angle_value, checklist.side_view ? 'Yes' : 'No',
-                checklist.whole_foot ? 'Yes' : 'No', checklist.no_distortion ? 'Yes' : 'No',
-                checklist.distance_ok ? 'Yes' : 'No',
+                m.angle_value, fidelity.check1, fidelity.check2, fidelity.check3, fidelity.check4,
                 m.timestamp || this.sessionData.timestamp, this.sessionData.device_info
             ]);
             const csvContent = '\uFEFF' + [csvHeaders.join(','), ...csvRows.map(row => row.map(v => `"${v}"`).join(','))].join('\n');

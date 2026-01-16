@@ -125,7 +125,7 @@ class AnkleCaptureApp {
         // Measurement screen buttons
         const btnBackToCamera = document.getElementById('btn-back-to-camera');
         if (btnBackToCamera) {
-            btnBackToCamera.addEventListener('click', () => this.navigateToScreen('camera'));
+            btnBackToCamera.addEventListener('click', () => this.handleBackFromMeasurement());
         }
 
         const btnResetPoints = document.getElementById('btn-reset-points');
@@ -336,6 +336,23 @@ class AnkleCaptureApp {
     }
 
     /**
+     * Handle back button from measurement screen
+     * For import mode: re-select file, for realtime mode: go back to camera
+     */
+    handleBackFromMeasurement() {
+        // Reset current measurements
+        this.measurements = [];
+
+        if (this.sessionData.mode === 'import') {
+            // For import mode, re-select a file
+            importManager.selectFile();
+        } else {
+            // For realtime mode, go back to camera
+            this.navigateToScreen('camera');
+        }
+    }
+
+    /**
      * Handle capture button
      */
     handleCapture() {
@@ -356,6 +373,14 @@ class AnkleCaptureApp {
      */
     navigateToMeasurementScreen() {
         this.navigateToScreen('measurement');
+
+        // Update back button text based on mode
+        const btnBack = document.getElementById('btn-back-to-camera');
+        if (btnBack) {
+            btnBack.textContent = this.sessionData.mode === 'import'
+                ? '← 画像を再選択'
+                : '← 再撮影';
+        }
 
         // Use requestAnimationFrame to ensure DOM is fully rendered before initializing
         requestAnimationFrame(() => {
