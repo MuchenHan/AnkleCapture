@@ -300,8 +300,8 @@
         </main>
     </div>
 
-    <!-- Fixed: File Input ID matches import.js reference -->
-    <input type="file" id="file-input" accept="image/*" class="hidden">
+    <!-- Fixed: File Input - visually hidden but accessible for iOS -->
+    <input type="file" id="file-input" accept="image/*" style="position: fixed; top: -100px; left: -100px; opacity: 0; pointer-events: none;">
 
     <!-- Distance Confirmation Modal -->
     <div id="distance-modal" class="modal hidden">

@@ -68,13 +68,18 @@ class ImportManager {
      * Trigger file selection
      */
     selectFile() {
+        console.log('ImportManager.selectFile() called, isInitialized:', this.isInitialized);
+
         // Auto-initialize if not already done
         if (!this.isInitialized) {
             console.log('ImportManager: Auto-initializing on selectFile()');
             this.init();
         }
 
+        console.log('fileInput element:', this.fileInput);
+
         if (this.fileInput) {
+            console.log('Triggering file input click...');
             this.fileInput.click();
         } else {
             console.error('File input not initialized - element not found in DOM');
@@ -86,8 +91,14 @@ class ImportManager {
      * Handle file selection result
      */
     async handleFileSelect(event) {
+        console.log('handleFileSelect called, event:', event);
         const file = event.target.files[0];
-        if (!file) return null;
+        console.log('Selected file:', file);
+
+        if (!file) {
+            console.log('No file selected');
+            return null;
+        }
 
         try {
             // Get EXIF orientation
@@ -95,22 +106,28 @@ class ImportManager {
             console.log('Detected orientation:', orientation);
 
             // Load and process image
+            console.log('Loading image...');
             this.importedImage = await this.loadImage(file, orientation);
+            console.log('Image loaded, dimensions:', this.importedImage.width, 'x', this.importedImage.height);
 
             // Show preview
+            console.log('Showing preview...');
             this.showPreview(this.importedImage);
 
             // Show modal
+            console.log('Showing modal...');
             this.showModal();
 
             return true;
         } catch (error) {
             console.error('Import failed:', error);
-            alert('画像の読み込みに失敗しました。');
+            alert('画像の読み込みに失敗しました: ' + error.message);
             return false;
         } finally {
             // Reset input so same file can be selected again
-            this.fileInput.value = '';
+            if (this.fileInput) {
+                this.fileInput.value = '';
+            }
         }
     }
 
@@ -311,11 +328,18 @@ class ImportManager {
      * Confirm import and proceed
      */
     confirmImport() {
+        console.log('confirmImport called');
+        console.log('importedImage:', this.importedImage);
+        console.log('checklist:', this.checklist);
+
         this.hideModal();
 
         // Notify app to proceed to measurement
         if (window.app) {
+            console.log('Calling app.handleImportComplete...');
             window.app.handleImportComplete(this.importedImage, this.checklist);
+        } else {
+            console.error('window.app not found!');
         }
     }
 
