@@ -57,7 +57,13 @@ class ImportManager {
 
         const btnConfirm = document.getElementById('btn-confirm-import');
         if (btnConfirm) {
-            btnConfirm.addEventListener('click', () => this.confirmImport());
+            console.log('Adding click listener to confirm button');
+            btnConfirm.addEventListener('click', () => {
+                console.log('Confirm button clicked!');
+                this.confirmImport();
+            });
+        } else {
+            console.error('Confirm button not found!');
         }
 
         this.isInitialized = true;
@@ -340,9 +346,12 @@ class ImportManager {
         };
 
         const allChecked = Object.values(this.checklist).every(v => v);
+        console.log('validateChecklist:', this.checklist, 'allChecked:', allChecked);
+
         const btn = document.getElementById('btn-confirm-import');
         if (btn) {
             btn.disabled = !allChecked;
+            console.log('Confirm button disabled:', btn.disabled);
         }
     }
 
