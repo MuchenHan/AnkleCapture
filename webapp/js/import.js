@@ -46,13 +46,7 @@ class ImportManager {
         checks.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                console.log('Adding change listener to checkbox:', id);
-                el.addEventListener('change', () => {
-                    console.log('Checkbox changed:', id, 'checked:', el.checked);
-                    this.validateChecklist();
-                });
-            } else {
-                console.error('Checkbox not found:', id);
+                el.addEventListener('change', () => this.validateChecklist());
             }
         });
 
@@ -63,38 +57,24 @@ class ImportManager {
 
         const btnConfirm = document.getElementById('btn-confirm-import');
         if (btnConfirm) {
-            console.log('Adding click listener to confirm button');
-            btnConfirm.addEventListener('click', () => {
-                console.log('Confirm button clicked!');
-                this.confirmImport();
-            });
-        } else {
-            console.error('Confirm button not found!');
+            btnConfirm.addEventListener('click', () => this.confirmImport());
         }
 
         this.isInitialized = true;
-        console.log('ImportManager initialized');
     }
 
     /**
      * Trigger file selection
      */
     selectFile() {
-        console.log('ImportManager.selectFile() called, isInitialized:', this.isInitialized);
-
         // Auto-initialize if not already done
         if (!this.isInitialized) {
-            console.log('ImportManager: Auto-initializing on selectFile()');
             this.init();
         }
 
-        console.log('fileInput element:', this.fileInput);
-
         if (this.fileInput) {
-            console.log('Triggering file input click...');
             this.fileInput.click();
         } else {
-            console.error('File input not initialized - element not found in DOM');
             alert('ファイル入力要素が見つかりません。ページを再読み込みしてください。');
         }
     }
@@ -103,31 +83,20 @@ class ImportManager {
      * Handle file selection result
      */
     async handleFileSelect(event) {
-        console.log('handleFileSelect called, event:', event);
         const file = event.target.files[0];
-        console.log('Selected file:', file);
-
-        if (!file) {
-            console.log('No file selected');
-            return null;
-        }
+        if (!file) return null;
 
         try {
             // Get EXIF orientation
             const orientation = await this.getExifOrientation(file);
-            console.log('Detected orientation:', orientation);
 
             // Load and process image
-            console.log('Loading image...');
             this.importedImage = await this.loadImage(file, orientation);
-            console.log('Image loaded, dimensions:', this.importedImage.width, 'x', this.importedImage.height);
 
             // Show modal first, then preview (modal must be visible for correct sizing)
-            console.log('Showing modal...');
             this.showModal();
 
             // Wait for modal to render, then show preview
-            console.log('Showing preview...');
             requestAnimationFrame(() => {
                 this.showPreview(this.importedImage);
             });
@@ -135,7 +104,7 @@ class ImportManager {
             return true;
         } catch (error) {
             console.error('Import failed:', error);
-            alert('画像の読み込みに失敗しました: ' + error.message);
+            alert('画像の読み込みに失敗しました');
             return false;
         } finally {
             // Reset input so same file can be selected again
@@ -261,21 +230,11 @@ class ImportManager {
      * Show preview in modal
      */
     showPreview(imgCanvas) {
-        console.log('showPreview called with canvas:', imgCanvas?.width, 'x', imgCanvas?.height);
-
         if (!this.previewCanvas) {
             this.previewCanvas = document.getElementById('modal-preview-canvas');
         }
 
-        if (!this.previewCanvas) {
-            console.error('Preview canvas element not found');
-            return;
-        }
-
-        if (!imgCanvas) {
-            console.error('No image canvas provided');
-            return;
-        }
+        if (!this.previewCanvas || !imgCanvas) return;
 
         const container = this.previewCanvas.parentElement;
         const ratio = imgCanvas.height / imgCanvas.width;
@@ -292,12 +251,8 @@ class ImportManager {
         this.previewCanvas.width = previewWidth;
         this.previewCanvas.height = previewWidth * ratio;
 
-        console.log('Preview canvas size:', this.previewCanvas.width, 'x', this.previewCanvas.height);
-
         const ctx = this.previewCanvas.getContext('2d');
         ctx.drawImage(imgCanvas, 0, 0, this.previewCanvas.width, this.previewCanvas.height);
-
-        console.log('Preview drawn successfully');
     }
 
     /**
@@ -352,12 +307,9 @@ class ImportManager {
         };
 
         const allChecked = Object.values(this.checklist).every(v => v);
-        console.log('validateChecklist:', this.checklist, 'allChecked:', allChecked);
-
         const btn = document.getElementById('btn-confirm-import');
         if (btn) {
             btn.disabled = !allChecked;
-            console.log('Confirm button disabled:', btn.disabled);
         }
     }
 
@@ -365,11 +317,6 @@ class ImportManager {
      * Confirm import and proceed
      */
     confirmImport() {
-        console.log('confirmImport called');
-        console.log('importedImage:', this.importedImage);
-        console.log('importedImage dimensions:', this.importedImage?.width, 'x', this.importedImage?.height);
-        console.log('checklist:', this.checklist);
-
         if (!this.importedImage) {
             alert('エラー: 画像が読み込まれていません');
             return;
@@ -379,11 +326,9 @@ class ImportManager {
 
         // Notify app to proceed to measurement
         if (window.app) {
-            console.log('Calling app.handleImportComplete...');
             window.app.handleImportComplete(this.importedImage, this.checklist);
         } else {
-            console.error('window.app not found!');
-            alert('エラー: アプリが初期化されていません');
+            alert('エラー: アプリが初期化されていません。ページを再読み込みしてください。');
         }
     }
 

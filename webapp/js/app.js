@@ -202,11 +202,6 @@ class AnkleCaptureApp {
      * Handle completed import (called from ImportManager)
      */
     handleImportComplete(imageCanvas, checklist) {
-        console.log('handleImportComplete called');
-        console.log('imageCanvas:', imageCanvas);
-        console.log('imageCanvas dimensions:', imageCanvas?.width, 'x', imageCanvas?.height);
-        console.log('checklist:', checklist);
-
         this.sessionData.checklist = checklist;
 
         this.capturedImages = {
@@ -214,7 +209,6 @@ class AnkleCaptureApp {
             overlay: imageCanvas
         };
 
-        console.log('capturedImages set, navigating to measurement screen...');
         this.navigateToMeasurementScreen();
     }
 
@@ -378,7 +372,6 @@ class AnkleCaptureApp {
      * Navigate to measurement screen
      */
     navigateToMeasurementScreen() {
-        console.log('navigateToMeasurementScreen called');
         this.navigateToScreen('measurement');
 
         // Update back button text based on mode
@@ -391,17 +384,10 @@ class AnkleCaptureApp {
 
         // Use requestAnimationFrame to ensure DOM is fully rendered before initializing
         requestAnimationFrame(() => {
-            console.log('requestAnimationFrame callback');
             const measurementCanvas = document.getElementById('measurement-canvas');
-            console.log('measurementCanvas element:', measurementCanvas);
-            console.log('capturedImages:', this.capturedImages);
 
             if (measurementCanvas && this.capturedImages) {
-                console.log('Initializing measurement with image:', this.capturedImages.original);
                 measurement.init(measurementCanvas, this.capturedImages.original);
-                console.log('measurement.init completed');
-            } else {
-                console.error('Cannot init measurement - missing canvas or images');
             }
 
             // Update measurement counter
