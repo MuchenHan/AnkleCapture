@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Foot outline - left foot viewed from lateral side -->
+  <path d="M 20 180 
+           L 20 160 
+           Q 15 140 20 120 
+           Q 25 100 30 80 
+           Q 35 60 45 40 
+           Q 55 20 70 15 
+           Q 85 10 90 25 
+           Q 95 40 90 60 
+           Q 85 80 80 100 
+           Q 75 120 75 140 
+           Q 75 160 80 180 
+           L 20 180 Z" 
+        fill="none"/>
+  <!-- Ankle marker -->
+  <circle cx="75" cy="120" r="5" fill="white" opacity="0.8"/>
+  <!-- Heel marker -->
+  <circle cx="25" cy="170" r="4" fill="white" opacity="0.6"/>
+  <!-- Toe marker -->
+  <circle cx="85" cy="25" r="4" fill="white" opacity="0.6"/>
+</svg>
