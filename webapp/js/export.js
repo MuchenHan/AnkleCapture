@@ -79,6 +79,7 @@ class ExportManager {
             'operator_id',
             'side',
             'mode',
+            'imported_file_name',
             'measurement_type',
             'measurement_num',
             'point1_label',
@@ -107,6 +108,7 @@ class ExportManager {
                 this.sessionData.operator_id || '',
                 this.sessionData.side,
                 this.sessionData.mode || 'realtime',
+                this.sessionData.imported_file_name || '',
                 this.sessionData.measurement_type,
                 index + 1,
                 m.points[0]?.label || '',
@@ -163,6 +165,7 @@ class ExportManager {
             operator_id: this.sessionData.operator_id,
             side: this.sessionData.side,
             mode: this.sessionData.mode,
+            imported_file_name: this.sessionData.imported_file_name || null,
             measurement_type: this.sessionData.measurement_type,
             checklist: this.sessionData.checklist,
             device_orientation: this.sessionData.device_orientation,
@@ -347,8 +350,8 @@ class ExportManager {
             const fidelity = this.getNormalizedFidelity(this.sessionData.checklist);
             const isImportMode = this.sessionData.mode === 'import';
             const csvHeaders = [
-                'session_id', 'subject_id', 'operator_id', 'side', 'mode', 'measurement_type',
-                'measurement_num', 'point1_label', 'point1_x', 'point1_y',
+                'session_id', 'subject_id', 'operator_id', 'side', 'mode', 'imported_file_name',
+                'measurement_type', 'measurement_num', 'point1_label', 'point1_x', 'point1_y',
                 'point2_label', 'point2_x', 'point2_y', 'point3_label', 'point3_x', 'point3_y',
                 'angle_value',
                 isImportMode ? 'fidelity_side_view' : 'fidelity_foot_in_frame',
@@ -359,7 +362,8 @@ class ExportManager {
             const csvRows = this.measurements.map((m, index) => [
                 this.sessionData.session_id, this.sessionData.subject_id,
                 this.sessionData.operator_id || '', this.sessionData.side,
-                this.sessionData.mode || 'realtime', this.sessionData.measurement_type,
+                this.sessionData.mode || 'realtime', this.sessionData.imported_file_name || '',
+                this.sessionData.measurement_type,
                 index + 1, m.points[0]?.label || '', m.points[0]?.x || '', m.points[0]?.y || '',
                 m.points[1]?.label || '', m.points[1]?.x || '', m.points[1]?.y || '',
                 m.points[2]?.label || '', m.points[2]?.x || '', m.points[2]?.y || '',

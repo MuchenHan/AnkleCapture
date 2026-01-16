@@ -201,8 +201,9 @@ class AnkleCaptureApp {
     /**
      * Handle completed import (called from ImportManager)
      */
-    handleImportComplete(imageCanvas, checklist) {
+    handleImportComplete(imageCanvas, checklist, fileName) {
         this.sessionData.checklist = checklist;
+        this.sessionData.imported_file_name = fileName || null;
 
         this.capturedImages = {
             original: imageCanvas,

@@ -17,6 +17,7 @@ class ImportManager {
             distance_ok: false
         };
         this.importedImage = null;
+        this.importedFileName = null; // Store the imported file name
         this.isInitialized = false; // Track initialization state
     }
 
@@ -87,6 +88,9 @@ class ImportManager {
         if (!file) return null;
 
         try {
+            // Save the file name
+            this.importedFileName = file.name;
+
             // Get EXIF orientation
             const orientation = await this.getExifOrientation(file);
 
@@ -324,9 +328,9 @@ class ImportManager {
 
         this.hideModal();
 
-        // Notify app to proceed to measurement
+        // Notify app to proceed to measurement (include file name)
         if (window.app) {
-            window.app.handleImportComplete(this.importedImage, this.checklist);
+            window.app.handleImportComplete(this.importedImage, this.checklist, this.importedFileName);
         } else {
             alert('エラー: アプリが初期化されていません。ページを再読み込みしてください。');
         }
