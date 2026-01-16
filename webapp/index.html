@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -14,7 +13,6 @@
     <link rel="stylesheet" href="css/camera.css">
     <link rel="stylesheet" href="css/measurement.css">
 </head>
-
 <body>
     <!-- Screen 1: Subject Information -->
     <div id="screen-subject" class="screen active">
@@ -53,16 +51,25 @@
                     </div>
                 </div>
 
+                <!-- Fixed: Single mode selector (removed duplicate) -->
                 <div class="form-group">
                     <label>測定モード *</label>
-                    <div class="radio-group">
-                        <label class="radio-label">
+                    <div class="mode-selector">
+                        <label class="mode-option">
                             <input type="radio" name="mode" value="realtime" checked>
-                            <span>リアルタイム撮影</span>
+                            <div class="mode-card">
+                                <span class="mode-icon">📷</span>
+                                <span class="mode-label">リアルタイム撮影</span>
+                                <span class="mode-desc">カメラで撮影</span>
+                            </div>
                         </label>
-                        <label class="radio-label">
+                        <label class="mode-option">
                             <input type="radio" name="mode" value="import">
-                            <span>写真インポート</span>
+                            <div class="mode-card">
+                                <span class="mode-icon">📁</span>
+                                <span class="mode-label">写真インポート</span>
+                                <span class="mode-desc">既存の写真を使用</span>
+                            </div>
                         </label>
                     </div>
                 </div>
@@ -72,28 +79,6 @@
                     <select id="measurement-type" name="measurement-type" required>
                         <option value="ankle_dorsiflexion">足関節背屈角度</option>
                     </select>
-                </div>
-
-                <div class="form-group">
-                    <label>測定モード *</label>
-                    <div class="mode-selector">
-                        <label class="mode-option">
-                            <input type="radio" name="mode" value="realtime" checked>
-                            <div class="mode-card">
-                                <span class="mode-icon"></span>
-                                <span class="mode-label">実時間撮影</span>
-                                <span class="mode-desc">カメラで撮影</span>
-                            </div>
-                        </label>
-                        <label class="mode-option">
-                            <input type="radio" name="mode" value="import">
-                            <div class="mode-card">
-                                <span class="mode-icon"></span>
-                                <span class="mode-label">写真導入</span>
-                                <span class="mode-desc">既存の写真を使用</span>
-                            </div>
-                        </label>
-                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-large">
@@ -185,11 +170,15 @@
 
     <!-- Screen 3: Measurement -->
     <div id="screen-measurement" class="screen">
-        <header class="app-header">
+        <header class="app-header measurement-header">
             <button id="btn-back-to-camera" class="btn btn-icon">
                 ← 再撮影
             </button>
             <h2>角度測定</h2>
+            <!-- Measurement counter -->
+            <div id="measurement-counter" class="measurement-counter">
+                測定 <span id="current-measurement-num">1</span>
+            </div>
         </header>
 
         <main class="content">
@@ -202,7 +191,8 @@
                         <li>第5中足骨頭</li>
                     </ol>
                     <div id="angle-result" class="angle-result hidden">
-                        <strong>測定角度:</strong> <span id="angle-value">--</span>°
+                        <strong>測定角度:</strong>
+                        <span id="angle-value">--</span>°
                     </div>
                 </div>
 
@@ -210,12 +200,23 @@
                     <canvas id="measurement-canvas"></canvas>
                 </div>
 
+                <!-- Measurement List (NEW) -->
+                <div id="measurement-list-container" class="measurement-list-container">
+                    <h3>測定履歴</h3>
+                    <div id="measurement-list" class="measurement-list">
+                        <!-- Measurements will be added here dynamically -->
+                    </div>
+                </div>
+
                 <div class="measurement-controls">
                     <button id="btn-reset-points" class="btn btn-secondary">
                         リセット
                     </button>
-                    <button id="btn-save-measurement" class="btn btn-primary" disabled>
-                        保存
+                    <button id="btn-add-measurement" class="btn btn-success" disabled>
+                        この測定を追加
+                    </button>
+                    <button id="btn-finish-measurements" class="btn btn-primary" disabled>
+                        測定完了・出力へ
                     </button>
                 </div>
             </div>
@@ -242,12 +243,34 @@
                             <span id="export-side">--</span>
                         </div>
                         <div class="summary-item">
-                            <span class="label">角度:</span>
-                            <span id="export-angle">--</span>°
+                            <span class="label">測定回数:</span>
+                            <span id="export-count">--</span>
                         </div>
                         <div class="summary-item">
                             <span class="label">測定日時:</span>
                             <span id="export-timestamp">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Measurement Results Table (NEW) -->
+                    <div id="export-results-table" class="export-results-table">
+                        <h4>測定結果一覧</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>角度 (°)</th>
+                                    <th>P1 (x,y)</th>
+                                    <th>P2 (x,y)</th>
+                                    <th>P3 (x,y)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="export-results-tbody">
+                            </tbody>
+                        </table>
+                        <div class="stats-summary">
+                            <span>平均: <strong id="export-mean">--</strong>°</span>
+                            <span>SD: <strong id="export-sd">--</strong>°</span>
                         </div>
                     </div>
                 </div>
@@ -255,13 +278,13 @@
                 <div class="export-options">
                     <h3>エクスポート形式</h3>
                     <button id="btn-export-csv" class="btn btn-primary btn-large">
-                        CSV形式でダウンロード
+                        📄 CSV形式でダウンロード
                     </button>
                     <button id="btn-export-json" class="btn btn-secondary btn-large">
-                        JSON形式でダウンロード
+                        📋 JSON形式でダウンロード
                     </button>
                     <button id="btn-export-images" class="btn btn-secondary btn-large">
-                        画像をダウンロード
+                        🖼️ 全画像をダウンロード
                     </button>
                 </div>
 
@@ -274,15 +297,14 @@
         </main>
     </div>
 
-    <!-- Hidden File Input for Import Mode -->
-    <input type="file" id="photo-input" accept="image/*" class="hidden">
+    <!-- Fixed: File Input ID matches import.js reference -->
+    <input type="file" id="file-input" accept="image/*" class="hidden">
 
     <!-- Distance Confirmation Modal -->
     <div id="distance-modal" class="modal hidden">
         <div class="modal-content">
             <h3>距離確認</h3>
             <p>カメラと被験者の距離は約 <strong>3m</strong> ですか?</p>
-
             <div class="distance-guide">
                 <p><strong>参考ガイド:</strong></p>
                 <ul>
@@ -291,7 +313,6 @@
                     <li>腕を広げた幅 ≈ 約170cm ≈ 約1.8倍</li>
                 </ul>
             </div>
-
             <div class="modal-buttons">
                 <button class="btn btn-warning distance-option" data-distance="too_close">
                     近すぎる
@@ -328,7 +349,7 @@
             </div>
 
             <div class="modal-preview">
-                <canvas id="import-preview-canvas"></canvas>
+                <canvas id="modal-preview-canvas"></canvas>
             </div>
 
             <div class="modal-buttons">
@@ -351,8 +372,6 @@
     <script src="js/import.js"></script>
     <script src="js/measurement.js"></script>
     <script src="js/export.js"></script>
-
     <script src="js/app.js"></script>
 </body>
-
 </html>

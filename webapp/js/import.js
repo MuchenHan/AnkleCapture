@@ -1,26 +1,39 @@
 /**
- * import.js - Photo Import Management
+ * import.js - Photo Import Management (Improved Version)
  * Handles file loading, EXIF orientation correction, and downsampling
+ * Fixed: Uses correct file input ID 'file-input'
  */
 
 const MAX_IMAGE_DIMENSION = 2048;
 
 class ImportManager {
     constructor() {
-        this.fileInput = document.getElementById('file-input');
-        this.previewCanvas = document.getElementById('import-preview-canvas');
+        this.fileInput = null; // Will be set in init()
+        this.previewCanvas = null;
         this.checklist = {
             side_view: false,
             whole_foot: false,
             no_distortion: false
         };
-        this.importedImage = null; // Canvas with corrected image
+        this.importedImage = null;
     }
 
     /**
      * Initialize import manager
      */
     init() {
+        // Fixed: Use correct ID 'file-input' (matches HTML)
+        this.fileInput = document.getElementById('file-input');
+        this.previewCanvas = document.getElementById('modal-preview-canvas');
+
+        if (!this.fileInput) {
+            console.error('File input element not found (id: file-input)');
+            return;
+        }
+
+        // Add file selection listener
+        this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+
         // Setup checklist listeners
         const checks = ['check-side-view', 'check-whole-foot', 'check-no-distortion'];
         checks.forEach(id => {
@@ -39,6 +52,8 @@ class ImportManager {
         if (btnConfirm) {
             btnConfirm.addEventListener('click', () => this.confirmImport());
         }
+
+        console.log('ImportManager initialized');
     }
 
     /**
@@ -47,6 +62,9 @@ class ImportManager {
     selectFile() {
         if (this.fileInput) {
             this.fileInput.click();
+        } else {
+            console.error('File input not initialized');
+            alert('ファイル入力が初期化されていません');
         }
     }
 
@@ -72,7 +90,6 @@ class ImportManager {
             this.showModal();
 
             return true;
-
         } catch (error) {
             console.error('Import failed:', error);
             alert('画像の読み込みに失敗しました。');
@@ -89,13 +106,17 @@ class ImportManager {
     loadImage(file, orientation) {
         return new Promise((resolve, reject) => {
             const img = new Image();
+
             img.onload = () => {
                 // Calculate new dimensions (downsampling)
                 let width = img.width;
                 let height = img.height;
 
                 if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
-                    const ratio = Math.min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height);
+                    const ratio = Math.min(
+                        MAX_IMAGE_DIMENSION / width,
+                        MAX_IMAGE_DIMENSION / height
+                    );
                     width = Math.round(width * ratio);
                     height = Math.round(height * ratio);
                 }
@@ -105,11 +126,6 @@ class ImportManager {
                 const ctx = canvas.getContext('2d');
 
                 // Handle orientation
-                // 1: Normal
-                // 3: Rotated 180
-                // 6: Rotated 90 CW
-                // 8: Rotated 90 CCW
-
                 if (4 < orientation && orientation < 9) {
                     canvas.width = height;
                     canvas.height = width;
@@ -135,6 +151,7 @@ class ImportManager {
 
                 resolve(canvas);
             };
+
             img.onerror = reject;
             img.src = URL.createObjectURL(file);
         });
@@ -186,6 +203,7 @@ class ImportManager {
                         offset += view.getUint16(offset, false);
                     }
                 }
+
                 resolve(-1);
             };
 
@@ -198,14 +216,20 @@ class ImportManager {
      * Show preview in modal
      */
     showPreview(imgCanvas) {
+        if (!this.previewCanvas) {
+            this.previewCanvas = document.getElementById('modal-preview-canvas');
+        }
+        
         if (!this.previewCanvas) return;
 
-        // Scale canvas for display
-        const rect = this.previewCanvas.parentElement.getBoundingClientRect();
+        const container = this.previewCanvas.parentElement;
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
         const ratio = imgCanvas.height / imgCanvas.width;
 
-        this.previewCanvas.width = rect.width;
-        this.previewCanvas.height = rect.width * ratio;
+        this.previewCanvas.width = Math.min(rect.width, 400);
+        this.previewCanvas.height = this.previewCanvas.width * ratio;
 
         const ctx = this.previewCanvas.getContext('2d');
         ctx.drawImage(imgCanvas, 0, 0, this.previewCanvas.width, this.previewCanvas.height);
@@ -255,9 +279,9 @@ class ImportManager {
      */
     validateChecklist() {
         this.checklist = {
-            side_view: document.getElementById('check-side-view').checked,
-            whole_foot: document.getElementById('check-whole-foot').checked,
-            no_distortion: document.getElementById('check-no-distortion').checked
+            side_view: document.getElementById('check-side-view')?.checked || false,
+            whole_foot: document.getElementById('check-whole-foot')?.checked || false,
+            no_distortion: document.getElementById('check-no-distortion')?.checked || false
         };
 
         const allChecked = Object.values(this.checklist).every(v => v);

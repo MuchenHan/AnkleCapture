@@ -1,29 +1,32 @@
 /**
- * app.js - Main Application Controller
- * Orchestrates all modules and handles navigation
+ * app.js - Main Application Controller (Improved Version)
+ * Supports multiple measurements per session
  */
 
 class AnkleCaptureApp {
     constructor() {
         this.currentScreen = 'subject';
+        
+        // Session data with support for multiple measurements
         this.sessionData = {
             session_id: null,
             subject_id: '',
             operator_id: '',
             side: 'L',
-            mode: 'realtime', // 'realtime' or 'import'
+            mode: 'realtime',
             posture: 'sitting',
             distance_m: 3.0,
             measurement_type: 'ankle_dorsiflexion',
             checklist: {},
             device_orientation: {},
-            points: [],
-            angle_value: null,
             timestamp: null,
-            device_info: '',
-            original_photo: '',
-            overlay_photo: ''
+            device_info: ''
         };
+        
+        // Array to store multiple measurements
+        this.measurements = [];
+        
+        // Current captured image (shared across measurements in import mode)
         this.capturedImages = null;
     }
 
@@ -31,11 +34,10 @@ class AnkleCaptureApp {
      * Initialize application
      */
     async init() {
-        console.log('AnkleCapture initializing...');
+        console.log('AnkleCapture (Improved) initializing...');
 
-        // Check browser support for all required features
+        // Check browser support
         const missingFeatures = [];
-
         if (!CameraManager.isSupported()) {
             missingFeatures.push('カメラAPI');
         }
@@ -58,17 +60,9 @@ class AnkleCaptureApp {
             console.error('Storage initialization failed:', error);
         }
 
-
-
         // Initialize import manager
         if (window.importManager) {
             importManager.init();
-
-            // Listen for file selection
-            const fileInput = document.getElementById('file-input');
-            if (fileInput) {
-                fileInput.addEventListener('change', (e) => importManager.handleFileSelect(e));
-            }
         }
 
         // Set up event listeners
@@ -139,9 +133,16 @@ class AnkleCaptureApp {
             btnResetPoints.addEventListener('click', () => measurement.reset());
         }
 
-        const btnSaveMeasurement = document.getElementById('btn-save-measurement');
-        if (btnSaveMeasurement) {
-            btnSaveMeasurement.addEventListener('click', () => this.handleSaveMeasurement());
+        // NEW: Add measurement button
+        const btnAddMeasurement = document.getElementById('btn-add-measurement');
+        if (btnAddMeasurement) {
+            btnAddMeasurement.addEventListener('click', () => this.handleAddMeasurement());
+        }
+
+        // NEW: Finish measurements button
+        const btnFinishMeasurements = document.getElementById('btn-finish-measurements');
+        if (btnFinishMeasurements) {
+            btnFinishMeasurements.addEventListener('click', () => this.handleFinishMeasurements());
         }
 
         // Export screen buttons
@@ -157,14 +158,7 @@ class AnkleCaptureApp {
 
         const btnExportImages = document.getElementById('btn-export-images');
         if (btnExportImages) {
-            btnExportImages.addEventListener('click', () => {
-                if (this.capturedImages) {
-                    exportManager.exportImages(
-                        this.capturedImages.original,
-                        this.capturedImages.overlay
-                    );
-                }
-            });
+            btnExportImages.addEventListener('click', () => exportManager.exportAllImages());
         }
 
         const btnNewMeasurement = document.getElementById('btn-new-measurement');
@@ -181,20 +175,20 @@ class AnkleCaptureApp {
         this.sessionData.subject_id = document.getElementById('subject-id').value;
         this.sessionData.operator_id = document.getElementById('operator-id').value;
         this.sessionData.side = document.querySelector('input[name="side"]:checked').value;
-
-        // Get mode
+        
         const modeEl = document.querySelector('input[name="mode"]:checked');
         this.sessionData.mode = modeEl ? modeEl.value : 'realtime';
-
         this.sessionData.measurement_type = document.getElementById('measurement-type').value;
         this.sessionData.session_id = storage.generateSessionId();
+        this.sessionData.timestamp = new Date().toISOString();
+
+        // Reset measurements array
+        this.measurements = [];
 
         // Handle based on mode
         if (this.sessionData.mode === 'import') {
-            // Trigger file selection
             importManager.selectFile();
         } else {
-            // Navigate to camera screen (Real-time)
             await this.navigateToScreen('camera');
         }
     }
@@ -203,18 +197,13 @@ class AnkleCaptureApp {
      * Handle completed import (called from ImportManager)
      */
     handleImportComplete(imageCanvas, checklist) {
-        // Save checklist
         this.sessionData.checklist = checklist;
-
-        // Store image
+        
         this.capturedImages = {
             original: imageCanvas,
-            overlay: imageCanvas // For import, overlay is same as original initially
+            overlay: imageCanvas
         };
 
-        this.sessionData.timestamp = new Date().toISOString();
-
-        // Go to measurement
         this.navigateToMeasurementScreen();
     }
 
@@ -222,12 +211,10 @@ class AnkleCaptureApp {
      * Navigate to screen
      */
     async navigateToScreen(screenName) {
-        // Hide all screens
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
         });
 
-        // Show target screen
         const targetScreen = document.getElementById(`screen-${screenName}`);
         if (targetScreen) {
             targetScreen.classList.add('active');
@@ -235,7 +222,6 @@ class AnkleCaptureApp {
 
         this.currentScreen = screenName;
 
-        // Screen-specific initialization
         if (screenName === 'camera') {
             await this.initCameraScreen();
         } else if (screenName === 'subject') {
@@ -250,23 +236,16 @@ class AnkleCaptureApp {
         const video = document.getElementById('camera-preview');
         const canvas = document.getElementById('overlay-canvas');
 
-        // Initialize camera
         const success = await camera.init(video);
         if (!success) {
             this.navigateToScreen('subject');
             return;
         }
 
-        // Initialize overlay
         overlay.init(canvas, video);
-
-        // Initialize capture manager
         capture.init();
-
-        // Update foot guide
         this.updateFootGuide();
 
-        // Update side display
         const sideDisplay = document.getElementById('current-side-display');
         if (sideDisplay) {
             sideDisplay.textContent = this.sessionData.side === 'L' ? '左脚' : '右脚';
@@ -286,12 +265,12 @@ class AnkleCaptureApp {
      */
     toggleSide() {
         this.sessionData.side = this.sessionData.side === 'L' ? 'R' : 'L';
-
+        
         const sideDisplay = document.getElementById('current-side-display');
         if (sideDisplay) {
             sideDisplay.textContent = this.sessionData.side === 'L' ? '左脚' : '右脚';
         }
-
+        
         this.updateFootGuide();
     }
 
@@ -301,8 +280,9 @@ class AnkleCaptureApp {
     updateFootGuide() {
         const footGuide = document.getElementById('foot-guide');
         if (footGuide) {
-            const svgPath = this.sessionData.side === 'L' ?
-                'assets/foot-left.svg' : 'assets/foot-right.svg';
+            const svgPath = this.sessionData.side === 'L' 
+                ? 'assets/foot-left.svg' 
+                : 'assets/foot-right.svg';
             footGuide.src = svgPath;
         }
     }
@@ -338,17 +318,13 @@ class AnkleCaptureApp {
             textEl.textContent = '✓ 水平';
         } else {
             indicator.className = 'level-indicator level-warning';
-
-            // Direction arrows
             const pitchDir = data.pitch_deg > 5 ? '↓' : data.pitch_deg < -5 ? '↑' : '';
             const rollDir = data.roll_deg > 5 ? '→' : data.roll_deg < -5 ? '←' : '';
-
             textEl.textContent = `${pitchDir}${rollDir} 調整してください`;
         }
 
-        // Update marker position
         if (markerEl && data.roll_deg !== null) {
-            const maxOffset = 100; // pixels
+            const maxOffset = 100;
             const offset = Math.max(-maxOffset, Math.min(maxOffset, data.roll_deg * 10));
             markerEl.style.transform = `translate(-50%, -50%) translateX(${offset}px)`;
         }
@@ -358,23 +334,15 @@ class AnkleCaptureApp {
      * Handle capture button
      */
     handleCapture() {
-        // Capture images
         this.capturedImages = capture.capture();
 
         if (!this.capturedImages) {
             return;
         }
 
-        // Save checklist data
         this.sessionData.checklist = capture.getChecklistData();
-
-        // Save orientation data
         this.sessionData.device_orientation = orientation.getCurrentOrientation();
 
-        // Set timestamp
-        this.sessionData.timestamp = new Date().toISOString();
-
-        // Navigate to measurement screen
         this.navigateToMeasurementScreen();
     }
 
@@ -384,32 +352,147 @@ class AnkleCaptureApp {
     navigateToMeasurementScreen() {
         this.navigateToScreen('measurement');
 
-        // Initialize measurement canvas
         const measurementCanvas = document.getElementById('measurement-canvas');
         if (measurementCanvas && this.capturedImages) {
             measurement.init(measurementCanvas, this.capturedImages.original);
         }
+
+        // Update measurement counter
+        this.updateMeasurementCounter();
+        this.updateMeasurementList();
+        this.updateMeasurementButtons();
     }
 
     /**
-     * Handle save measurement
+     * Update measurement counter display
      */
-    async handleSaveMeasurement() {
-        // Get measurement data
-        const measurementData = measurement.getMeasurementData();
-        this.sessionData.points = measurementData.points;
-        this.sessionData.angle_value = measurementData.angle_value;
+    updateMeasurementCounter() {
+        const counterEl = document.getElementById('current-measurement-num');
+        if (counterEl) {
+            counterEl.textContent = this.measurements.length + 1;
+        }
+    }
 
-        // Save to IndexedDB
+    /**
+     * Update measurement list display
+     */
+    updateMeasurementList() {
+        const listEl = document.getElementById('measurement-list');
+        if (!listEl) return;
+
+        listEl.innerHTML = '';
+
+        this.measurements.forEach((m, index) => {
+            const item = document.createElement('div');
+            item.className = 'measurement-item';
+            item.innerHTML = `
+                <span class="measurement-num">#${index + 1}</span>
+                <span class="measurement-angle">${m.angle_value}°</span>
+                <button class="btn btn-small btn-danger" data-index="${index}">削除</button>
+            `;
+            
+            // Add delete handler
+            item.querySelector('button').addEventListener('click', () => {
+                this.deleteMeasurement(index);
+            });
+
+            listEl.appendChild(item);
+        });
+    }
+
+    /**
+     * Update measurement control buttons state
+     */
+    updateMeasurementButtons() {
+        const btnAdd = document.getElementById('btn-add-measurement');
+        const btnFinish = document.getElementById('btn-finish-measurements');
+
+        // Add button: enabled when current measurement is complete
+        if (btnAdd) {
+            btnAdd.disabled = true; // Will be enabled by measurement.js when points are complete
+        }
+
+        // Finish button: enabled when at least one measurement exists
+        if (btnFinish) {
+            btnFinish.disabled = this.measurements.length === 0;
+        }
+    }
+
+    /**
+     * Handle adding current measurement to list
+     */
+    handleAddMeasurement() {
+        const measurementData = measurement.getMeasurementData();
+        
+        if (!measurementData.angle_value) {
+            alert('測定が完了していません');
+            return;
+        }
+
+        // Generate overlay image with points and angle
+        const overlayCanvas = measurement.generateOverlayImage();
+
+        // Add to measurements array
+        this.measurements.push({
+            measurement_num: this.measurements.length + 1,
+            points: measurementData.points,
+            angle_value: measurementData.angle_value,
+            original_image: this.capturedImages.original,
+            overlay_image: overlayCanvas,
+            timestamp: new Date().toISOString()
+        });
+
+        // Reset for next measurement
+        measurement.reset();
+        
+        // Update UI
+        this.updateMeasurementCounter();
+        this.updateMeasurementList();
+        this.updateMeasurementButtons();
+
+        console.log(`Measurement #${this.measurements.length} added: ${measurementData.angle_value}°`);
+    }
+
+    /**
+     * Delete a measurement from list
+     */
+    deleteMeasurement(index) {
+        if (confirm(`測定 #${index + 1} を削除しますか？`)) {
+            this.measurements.splice(index, 1);
+            
+            // Renumber remaining measurements
+            this.measurements.forEach((m, i) => {
+                m.measurement_num = i + 1;
+            });
+
+            this.updateMeasurementCounter();
+            this.updateMeasurementList();
+            this.updateMeasurementButtons();
+        }
+    }
+
+    /**
+     * Handle finishing all measurements
+     */
+    async handleFinishMeasurements() {
+        if (this.measurements.length === 0) {
+            alert('少なくとも1回の測定が必要です');
+            return;
+        }
+
+        // Save all measurements to IndexedDB
         try {
-            await storage.saveMeasurement(this.sessionData);
-            console.log('Measurement saved to IndexedDB');
+            await storage.saveMeasurementSession({
+                ...this.sessionData,
+                measurements: this.measurements
+            });
+            console.log('All measurements saved to IndexedDB');
         } catch (error) {
-            console.error('Failed to save measurement:', error);
+            console.error('Failed to save measurements:', error);
         }
 
         // Set export data
-        exportManager.setData(this.sessionData);
+        exportManager.setData(this.sessionData, this.measurements);
 
         // Navigate to export screen
         this.navigateToExportScreen();
@@ -423,18 +506,51 @@ class AnkleCaptureApp {
 
         // Update summary display
         document.getElementById('export-subject-id').textContent = this.sessionData.subject_id;
-        document.getElementById('export-side').textContent =
+        document.getElementById('export-side').textContent = 
             this.sessionData.side === 'L' ? '左脚 (L)' : '右脚 (R)';
-        document.getElementById('export-angle').textContent = this.sessionData.angle_value;
-        document.getElementById('export-timestamp').textContent =
+        document.getElementById('export-count').textContent = this.measurements.length;
+        document.getElementById('export-timestamp').textContent = 
             exportManager.formatTimestampForDisplay(this.sessionData.timestamp);
+
+        // Populate results table
+        this.populateExportResultsTable();
     }
 
     /**
-     * Start new measurement
+     * Populate export results table
+     */
+    populateExportResultsTable() {
+        const tbody = document.getElementById('export-results-tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        this.measurements.forEach((m, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${m.angle_value}</td>
+                <td>(${m.points[0]?.x || '--'}, ${m.points[0]?.y || '--'})</td>
+                <td>(${m.points[1]?.x || '--'}, ${m.points[1]?.y || '--'})</td>
+                <td>(${m.points[2]?.x || '--'}, ${m.points[2]?.y || '--'})</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Calculate and display statistics
+        const angles = this.measurements.map(m => m.angle_value);
+        const mean = angles.reduce((a, b) => a + b, 0) / angles.length;
+        const variance = angles.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / angles.length;
+        const sd = Math.sqrt(variance);
+
+        document.getElementById('export-mean').textContent = mean.toFixed(1);
+        document.getElementById('export-sd').textContent = sd.toFixed(2);
+    }
+
+    /**
+     * Start new measurement session
      */
     startNewMeasurement() {
-        // Reset session data
         this.sessionData = {
             session_id: null,
             subject_id: '',
@@ -446,17 +562,13 @@ class AnkleCaptureApp {
             measurement_type: 'ankle_dorsiflexion',
             checklist: {},
             device_orientation: {},
-            points: [],
-            angle_value: null,
             timestamp: null,
-            device_info: this.getDeviceInfo(),
-            original_photo: '',
-            overlay_photo: ''
+            device_info: this.getDeviceInfo()
         };
 
+        this.measurements = [];
         this.capturedImages = null;
 
-        // Navigate to subject screen
         this.navigateToScreen('subject');
     }
 
@@ -466,11 +578,20 @@ class AnkleCaptureApp {
     getDeviceInfo() {
         return `${navigator.userAgent}`;
     }
+
+    /**
+     * Enable add measurement button (called from measurement.js)
+     */
+    enableAddMeasurementButton(enabled) {
+        const btnAdd = document.getElementById('btn-add-measurement');
+        if (btnAdd) {
+            btnAdd.disabled = !enabled;
+        }
+    }
 }
 
 // Initialize app when DOM is ready
 let app;
-
 document.addEventListener('DOMContentLoaded', async () => {
     app = new AnkleCaptureApp();
     await app.init();

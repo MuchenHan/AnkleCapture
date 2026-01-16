@@ -1,6 +1,6 @@
 /**
- * measurement.js - Angle Measurement
- * Handles 3-point marking and angle calculation
+ * measurement.js - Angle Measurement (Improved Version)
+ * Handles 3-point marking, angle calculation, and overlay image generation
  */
 
 class MeasurementManager {
@@ -24,17 +24,12 @@ class MeasurementManager {
         this.ctx = this.canvas.getContext('2d');
         this.image = imageCanvas;
 
-        // Set canvas size to match image
         this.canvas.width = this.image.width;
         this.canvas.height = this.image.height;
 
-        // Draw initial image
         this.draw();
-
-        // Add event listeners
         this.addEventListeners();
 
-        // Reset points
         this.points = [];
         this.angleValue = null;
     }
@@ -43,15 +38,31 @@ class MeasurementManager {
      * Add event listeners for point marking
      */
     addEventListeners() {
+        // Remove existing listeners first
+        this.canvas.removeEventListener('touchstart', this.boundTouchStart);
+        this.canvas.removeEventListener('touchmove', this.boundTouchMove);
+        this.canvas.removeEventListener('touchend', this.boundTouchEnd);
+        this.canvas.removeEventListener('mousedown', this.boundMouseDown);
+        this.canvas.removeEventListener('mousemove', this.boundMouseMove);
+        this.canvas.removeEventListener('mouseup', this.boundMouseUp);
+
+        // Create bound handlers
+        this.boundTouchStart = this.handleTouchStart.bind(this);
+        this.boundTouchMove = this.handleTouchMove.bind(this);
+        this.boundTouchEnd = this.handleTouchEnd.bind(this);
+        this.boundMouseDown = this.handleMouseDown.bind(this);
+        this.boundMouseMove = this.handleMouseMove.bind(this);
+        this.boundMouseUp = this.handleMouseUp.bind(this);
+
         // Touch events (mobile)
-        this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-        this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-        this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
+        this.canvas.addEventListener('touchstart', this.boundTouchStart, { passive: false });
+        this.canvas.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+        this.canvas.addEventListener('touchend', this.boundTouchEnd, { passive: false });
 
         // Mouse events (desktop)
-        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.addEventListener('mousedown', this.boundMouseDown);
+        this.canvas.addEventListener('mousemove', this.boundMouseMove);
+        this.canvas.addEventListener('mouseup', this.boundMouseUp);
     }
 
     /**
@@ -78,51 +89,33 @@ class MeasurementManager {
         };
     }
 
-    /**
-     * Handle touch start
-     */
     handleTouchStart(event) {
         event.preventDefault();
         const coords = this.getEventCoordinates(event);
         this.handlePointerDown(coords.x, coords.y);
     }
 
-    /**
-     * Handle touch move
-     */
     handleTouchMove(event) {
         event.preventDefault();
         const coords = this.getEventCoordinates(event);
         this.handlePointerMove(coords.x, coords.y);
     }
 
-    /**
-     * Handle touch end
-     */
     handleTouchEnd(event) {
         event.preventDefault();
         this.handlePointerUp();
     }
 
-    /**
-     * Handle mouse down
-     */
     handleMouseDown(event) {
         const coords = this.getEventCoordinates(event);
         this.handlePointerDown(coords.x, coords.y);
     }
 
-    /**
-     * Handle mouse move
-     */
     handleMouseMove(event) {
         const coords = this.getEventCoordinates(event);
         this.handlePointerMove(coords.x, coords.y);
     }
 
-    /**
-     * Handle mouse up
-     */
     handleMouseUp(event) {
         this.handlePointerUp();
     }
@@ -131,11 +124,10 @@ class MeasurementManager {
      * Handle pointer down (unified for touch and mouse)
      */
     handlePointerDown(x, y) {
-        // Check if clicking on existing point
+        // Check if clicking on existing point for dragging
         for (let i = 0; i < this.points.length; i++) {
             const point = this.points[i];
             const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
-
             if (distance < this.pointRadius * 2) {
                 this.isDragging = true;
                 this.dragPointIndex = i;
@@ -149,31 +141,23 @@ class MeasurementManager {
             this.updatePointLabels();
             this.draw();
 
-            // Calculate angle if all points are placed
             if (this.points.length === this.maxPoints) {
                 this.calculateAngle();
             }
         }
     }
 
-    /**
-     * Handle pointer move
-     */
     handlePointerMove(x, y) {
         if (this.isDragging && this.dragPointIndex >= 0) {
             this.points[this.dragPointIndex] = { x, y };
             this.draw();
 
-            // Recalculate angle if all points exist
             if (this.points.length === this.maxPoints) {
                 this.calculateAngle();
             }
         }
     }
 
-    /**
-     * Handle pointer up
-     */
     handlePointerUp() {
         this.isDragging = false;
         this.dragPointIndex = -1;
@@ -204,12 +188,10 @@ class MeasurementManager {
         const cosAngle = dot / (mag1 * mag2);
         const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
 
-        // Convert to degrees and round to 1 decimal place
-        this.angleValue = Math.round(angleRad * (180 / Math.PI) * 10) / 10;
+        // Convert to degrees (3 decimal places for precision)
+        this.angleValue = Math.round(angleRad * (180 / Math.PI) * 1000) / 1000;
 
-        // Update UI
         this.updateAngleDisplay();
-
         return this.angleValue;
     }
 
@@ -219,15 +201,24 @@ class MeasurementManager {
     updateAngleDisplay() {
         const resultEl = document.getElementById('angle-result');
         const valueEl = document.getElementById('angle-value');
-        const saveBtn = document.getElementById('btn-save-measurement');
+        const btnAdd = document.getElementById('btn-add-measurement');
 
         if (this.angleValue !== null) {
-            if (valueEl) valueEl.textContent = this.angleValue;
+            if (valueEl) valueEl.textContent = this.angleValue.toFixed(3);
             if (resultEl) resultEl.classList.remove('hidden');
-            if (saveBtn) saveBtn.disabled = false;
+            if (btnAdd) btnAdd.disabled = false;
+            
+            // Notify app that measurement is complete
+            if (window.app) {
+                app.enableAddMeasurementButton(true);
+            }
         } else {
             if (resultEl) resultEl.classList.add('hidden');
-            if (saveBtn) saveBtn.disabled = true;
+            if (btnAdd) btnAdd.disabled = true;
+            
+            if (window.app) {
+                app.enableAddMeasurementButton(false);
+            }
         }
     }
 
@@ -235,9 +226,7 @@ class MeasurementManager {
      * Update point labels in instruction list
      */
     updatePointLabels() {
-        const labels = ['腓骨頭', '外果', '第5中足骨頭'];
         const listItems = document.querySelectorAll('#point-labels li');
-
         listItems.forEach((item, index) => {
             if (index < this.points.length) {
                 item.classList.add('completed');
@@ -253,10 +242,7 @@ class MeasurementManager {
     draw() {
         if (!this.ctx || !this.image) return;
 
-        // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Draw image
         this.ctx.drawImage(this.image, 0, 0);
 
         // Draw lines between points
@@ -275,7 +261,6 @@ class MeasurementManager {
 
         // Draw points
         this.points.forEach((point, index) => {
-            // Outer circle
             this.ctx.fillStyle = '#EF4444';
             this.ctx.strokeStyle = 'white';
             this.ctx.lineWidth = 3;
@@ -305,7 +290,6 @@ class MeasurementManager {
     drawAngleArc() {
         const [p1, p2, p3] = this.points;
 
-        // Calculate angles
         const angle1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
         const angle2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
 
@@ -319,13 +303,129 @@ class MeasurementManager {
 
         // Draw angle text
         const midAngle = (angle1 + angle2) / 2;
-        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 20);
-        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 20);
+        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 25);
+        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 25);
 
         this.ctx.fillStyle = '#10B981';
         this.ctx.font = 'bold 20px sans-serif';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(`${this.angleValue}°`, textX, textY);
+        this.ctx.fillText(`${this.angleValue.toFixed(3)}°`, textX, textY);
+    }
+
+    /**
+     * Generate overlay image with points and angle
+     * Returns a new canvas with the annotated image
+     */
+    generateOverlayImage() {
+        if (!this.image || this.points.length !== 3 || !this.angleValue) {
+            return null;
+        }
+
+        // Create a new canvas for the overlay
+        const overlayCanvas = document.createElement('canvas');
+        overlayCanvas.width = this.image.width;
+        overlayCanvas.height = this.image.height;
+        const ctx = overlayCanvas.getContext('2d');
+
+        // Draw original image
+        ctx.drawImage(this.image, 0, 0);
+
+        // Draw lines between points
+        ctx.strokeStyle = '#2563EB';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+        ctx.lineTo(this.points[1].x, this.points[1].y);
+        ctx.lineTo(this.points[2].x, this.points[2].y);
+        ctx.stroke();
+
+        // Draw points with labels
+        const labels = ['P1', 'P2', 'P3'];
+        const labelNames = ['腓骨頭', '外果', '第5中足骨頭'];
+
+        this.points.forEach((point, index) => {
+            // Outer circle
+            ctx.fillStyle = '#EF4444';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Point number
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(labels[index], point.x, point.y);
+
+            // Label name (offset from point)
+            ctx.fillStyle = '#1F2937';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 14px sans-serif';
+            
+            const offsetY = index === 1 ? 35 : -35; // P2 below, others above
+            ctx.strokeText(labelNames[index], point.x, point.y + offsetY);
+            ctx.fillText(labelNames[index], point.x, point.y + offsetY);
+        });
+
+        // Draw angle arc
+        const [p1, p2, p3] = this.points;
+        const angle1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+        const angle2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
+        const arcRadius = 60;
+
+        ctx.strokeStyle = '#10B981';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(p2.x, p2.y, arcRadius, angle1, angle2, false);
+        ctx.stroke();
+
+        // Draw angle value with background
+        const midAngle = (angle1 + angle2) / 2;
+        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 40);
+        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 40);
+
+        const angleText = `${this.angleValue.toFixed(3)}°`;
+        ctx.font = 'bold 24px sans-serif';
+        const textMetrics = ctx.measureText(angleText);
+        const padding = 8;
+
+        // Background rectangle
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(
+            textX - textMetrics.width / 2 - padding,
+            textY - 14 - padding,
+            textMetrics.width + padding * 2,
+            28 + padding * 2,
+            5
+        );
+        ctx.fill();
+
+        // Angle text
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(angleText, textX, textY);
+
+        // Add timestamp watermark
+        const timestamp = new Date().toLocaleString('ja-JP');
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.strokeText(timestamp, this.image.width - 10, this.image.height - 10);
+        ctx.fillText(timestamp, this.image.width - 10, this.image.height - 10);
+
+        return overlayCanvas;
     }
 
     /**

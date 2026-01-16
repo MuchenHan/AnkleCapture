@@ -1,10 +1,10 @@
 /**
- * storage.js - IndexedDB Data Persistence
+ * storage.js - IndexedDB Data Persistence (Improved)
  * Handles storing and retrieving measurement data
  */
 
 const DB_NAME = 'AnkleCaptureDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'measurements';
 
 class StorageManager {
@@ -33,13 +33,11 @@ class StorageManager {
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
 
-                // Create object store if it doesn't exist
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
                     const objectStore = db.createObjectStore(STORE_NAME, {
                         keyPath: 'session_id'
                     });
 
-                    // Create indexes
                     objectStore.createIndex('subject_id', 'subject_id', { unique: false });
                     objectStore.createIndex('timestamp', 'timestamp', { unique: false });
                     objectStore.createIndex('side', 'side', { unique: false });
@@ -51,17 +49,43 @@ class StorageManager {
     }
 
     /**
-     * Save measurement data
+     * Save single measurement data (legacy)
      */
     async saveMeasurement(data) {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
-
             const request = objectStore.put(data);
 
             request.onsuccess = () => {
                 console.log('Measurement saved:', data.session_id);
+                resolve(data.session_id);
+            };
+
+            request.onerror = () => {
+                console.error('Save error:', request.error);
+                reject(request.error);
+            };
+        });
+    }
+
+    /**
+     * Save measurement session with multiple measurements (NEW)
+     */
+    async saveMeasurementSession(sessionData) {
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+            const objectStore = transaction.objectStore(STORE_NAME);
+            
+            const data = {
+                ...sessionData,
+                measurement_count: sessionData.measurements?.length || 0
+            };
+
+            const request = objectStore.put(data);
+
+            request.onsuccess = () => {
+                console.log('Measurement session saved:', data.session_id);
                 resolve(data.session_id);
             };
 
@@ -79,7 +103,6 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const objectStore = transaction.objectStore(STORE_NAME);
-
             const request = objectStore.get(sessionId);
 
             request.onsuccess = () => {
@@ -99,7 +122,6 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const objectStore = transaction.objectStore(STORE_NAME);
-
             const request = objectStore.getAll();
 
             request.onsuccess = () => {
@@ -119,7 +141,6 @@ class StorageManager {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
-
             const request = objectStore.delete(sessionId);
 
             request.onsuccess = () => {

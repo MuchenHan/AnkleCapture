@@ -1,18 +1,20 @@
 /**
- * export.js - Data Export
- * Handles CSV, JSON, and image export
+ * export.js - Data Export (Improved Version)
+ * Handles CSV, JSON, and image export for multiple measurements
  */
 
 class ExportManager {
     constructor() {
-        this.currentData = null;
+        this.sessionData = null;
+        this.measurements = [];
     }
 
     /**
      * Set current measurement data
      */
-    setData(data) {
-        this.currentData = data;
+    setData(sessionData, measurements) {
+        this.sessionData = sessionData;
+        this.measurements = measurements || [];
     }
 
     /**
@@ -23,10 +25,10 @@ class ExportManager {
     }
 
     /**
-     * Export as CSV
+     * Export all measurements as CSV
      */
-    exportCSV(data = this.currentData) {
-        if (!data) {
+    exportCSV() {
+        if (!this.sessionData || this.measurements.length === 0) {
             alert('エクスポートするデータがありません');
             return;
         }
@@ -39,13 +41,7 @@ class ExportManager {
             'side',
             'mode',
             'measurement_type',
-            'foot_in_frame',
-            'heel_on_ground',
-            'foot_flat',
-            'distance_confirmed',
-            'pitch_deg',
-            'roll_deg',
-            'is_level',
+            'measurement_num',
             'point1_label',
             'point1_x',
             'point1_y',
@@ -60,91 +56,160 @@ class ExportManager {
             'device_info'
         ];
 
-        // CSV row
-        const row = [
-            data.session_id,
-            data.subject_id,
-            data.operator_id || '',
-            data.side,
-            data.mode || 'realtime',
-            data.measurement_type,
-            data.checklist.foot_in_frame,
-            data.checklist.heel_on_ground,
-            data.checklist.foot_flat,
-            data.checklist.distance_confirmed || '',
-            data.device_orientation?.pitch_deg ?? '',
-            data.device_orientation?.roll_deg ?? '',
-            data.device_orientation?.is_level ?? '',
-            data.points[0]?.label || '',
-            data.points[0]?.x || '',
-            data.points[0]?.y || '',
-            data.points[1]?.label || '',
-            data.points[1]?.x || '',
-            data.points[1]?.y || '',
-            data.points[2]?.label || '',
-            data.points[2]?.x || '',
-            data.points[2]?.y || '',
-            data.angle_value,
-            data.timestamp,
-            data.device_info
-        ];
+        // CSV rows
+        const rows = this.measurements.map((m, index) => {
+            return [
+                this.sessionData.session_id,
+                this.sessionData.subject_id,
+                this.sessionData.operator_id || '',
+                this.sessionData.side,
+                this.sessionData.mode || 'realtime',
+                this.sessionData.measurement_type,
+                index + 1,
+                m.points[0]?.label || '',
+                m.points[0]?.x || '',
+                m.points[0]?.y || '',
+                m.points[1]?.label || '',
+                m.points[1]?.x || '',
+                m.points[1]?.y || '',
+                m.points[2]?.label || '',
+                m.points[2]?.x || '',
+                m.points[2]?.y || '',
+                m.angle_value,
+                m.timestamp || this.sessionData.timestamp,
+                this.sessionData.device_info
+            ];
+        });
 
         // Create CSV content
         const csvContent = [
             headers.join(','),
-            row.map(value => `"${value}"`).join(',')
+            ...rows.map(row => row.map(value => `"${value}"`).join(','))
         ].join('\n');
 
         // Download
-        const filename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.csv`;
-        this.downloadFile(csvContent, filename, 'text/csv');
+        const filename = `${this.sanitizeFilename(this.sessionData.subject_id)}_${this.sessionData.side}_${this.formatTimestampForFilename(this.sessionData.timestamp)}.csv`;
+        this.downloadFile(csvContent, filename, 'text/csv;charset=utf-8');
+
+        console.log(`CSV exported: ${this.measurements.length} measurements`);
     }
 
     /**
      * Export as JSON (paper-standard format)
-     * Only includes fields specified in the paper
      */
-    exportJSON(data = this.currentData) {
-        if (!data) {
+    exportJSON() {
+        if (!this.sessionData || this.measurements.length === 0) {
             alert('エクスポートするデータがありません');
             return;
         }
 
-        // Paper-standard format: only 11 fields
+        // Calculate statistics
+        const angles = this.measurements.map(m => m.angle_value);
+        const mean = angles.reduce((a, b) => a + b, 0) / angles.length;
+        const variance = angles.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / angles.length;
+        const sd = Math.sqrt(variance);
+
+        // Paper-standard format
         const standardFormat = {
-            session_id: data.session_id,
-            subject_id: data.subject_id,
-            operator_id: data.operator_id,
-            side: data.side,
-            measurement_type: data.measurement_type,
-            checklist: data.checklist,
-            device_orientation: data.device_orientation,
-            points: data.points,
-            angle_value: data.angle_value,
-            timestamp: data.timestamp,
-            device_info: data.device_info
+            session_id: this.sessionData.session_id,
+            subject_id: this.sessionData.subject_id,
+            operator_id: this.sessionData.operator_id,
+            side: this.sessionData.side,
+            mode: this.sessionData.mode,
+            measurement_type: this.sessionData.measurement_type,
+            checklist: this.sessionData.checklist,
+            device_orientation: this.sessionData.device_orientation,
+            timestamp: this.sessionData.timestamp,
+            device_info: this.sessionData.device_info,
+            statistics: {
+                count: this.measurements.length,
+                mean: Math.round(mean * 1000) / 1000,
+                sd: Math.round(sd * 1000) / 1000,
+                min: Math.min(...angles),
+                max: Math.max(...angles)
+            },
+            measurements: this.measurements.map((m, index) => ({
+                measurement_num: index + 1,
+                points: m.points,
+                angle_value: m.angle_value,
+                timestamp: m.timestamp
+            }))
         };
 
-        // Add mode field if present (for import mode)
-        if (data.mode) {
-            standardFormat.mode = data.mode;
-        }
-
         const jsonContent = JSON.stringify(standardFormat, null, 2);
-        const filename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}.json`;
+        const filename = `${this.sanitizeFilename(this.sessionData.subject_id)}_${this.sessionData.side}_${this.formatTimestampForFilename(this.sessionData.timestamp)}.json`;
         this.downloadFile(jsonContent, filename, 'application/json');
+
+        console.log(`JSON exported: ${this.measurements.length} measurements`);
     }
 
     /**
-     * Export images
+     * Export all overlay images
      */
-    exportImages(originalCanvas, overlayCanvas, data = this.currentData) {
-        if (!originalCanvas || !overlayCanvas || !data) {
+    async exportAllImages() {
+        if (!this.sessionData || this.measurements.length === 0) {
             alert('エクスポートする画像がありません');
             return;
         }
 
-        const baseFilename = `${this.sanitizeFilename(data.subject_id)}_${data.side}_${this.formatTimestampForFilename(data.timestamp)}`;
+        const baseFilename = `${this.sanitizeFilename(this.sessionData.subject_id)}_${this.sessionData.side}_${this.formatTimestampForFilename(this.sessionData.timestamp)}`;
+
+        // Export each measurement's overlay image
+        for (let i = 0; i < this.measurements.length; i++) {
+            const m = this.measurements[i];
+            
+            if (m.overlay_image) {
+                await this.exportSingleImage(
+                    m.overlay_image,
+                    `${baseFilename}_measurement${i + 1}_overlay.png`,
+                    i * 300 // Delay to prevent browser blocking
+                );
+            }
+        }
+
+        // Also export original image (just the first one if multiple)
+        if (this.measurements[0]?.original_image) {
+            await this.exportSingleImage(
+                this.measurements[0].original_image,
+                `${baseFilename}_original.png`,
+                this.measurements.length * 300
+            );
+        }
+
+        console.log(`Images exported: ${this.measurements.length} overlay images + 1 original`);
+    }
+
+    /**
+     * Export single image with delay
+     */
+    exportSingleImage(canvas, filename, delay = 0) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+                    resolve();
+                }, 'image/png');
+            }, delay);
+        });
+    }
+
+    /**
+     * Export images (legacy interface)
+     */
+    exportImages(originalCanvas, overlayCanvas) {
+        if (!originalCanvas || !overlayCanvas || !this.sessionData) {
+            alert('エクスポートする画像がありません');
+            return;
+        }
+
+        const baseFilename = `${this.sanitizeFilename(this.sessionData.subject_id)}_${this.sessionData.side}_${this.formatTimestampForFilename(this.sessionData.timestamp)}`;
 
         // Export original image
         originalCanvas.toBlob((blob) => {
@@ -156,7 +221,7 @@ class ExportManager {
             URL.revokeObjectURL(url);
         }, 'image/png');
 
-        // Export overlay image (with delay to avoid browser blocking)
+        // Export overlay image (with delay)
         setTimeout(() => {
             overlayCanvas.toBlob((blob) => {
                 const url = URL.createObjectURL(blob);
@@ -173,7 +238,8 @@ class ExportManager {
      * Download file helper
      */
     downloadFile(content, filename, mimeType) {
-        const blob = new Blob([content], { type: mimeType });
+        const BOM = '\uFEFF'; // UTF-8 BOM for Excel compatibility
+        const blob = new Blob([BOM + content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

@@ -22,7 +22,6 @@ class OrientationManager {
      * Request permission (required for iOS 13+)
      */
     async requestPermission() {
-        // Check if permission API exists (iOS 13+)
         if (typeof DeviceOrientationEvent !== 'undefined' &&
             typeof DeviceOrientationEvent.requestPermission === 'function') {
             try {
@@ -34,8 +33,6 @@ class OrientationManager {
                 return false;
             }
         }
-
-        // Non-iOS or older iOS versions
         return true;
     }
 
@@ -44,13 +41,13 @@ class OrientationManager {
      */
     async start(onUpdate) {
         const granted = await this.requestPermission();
-
         if (!granted) {
             return false;
         }
 
         this.onUpdateCallback = onUpdate;
         this.boundHandleOrientation = this.handleOrientation.bind(this);
+
         window.addEventListener('deviceorientation', this.boundHandleOrientation, true);
         this.isEnabled = true;
 
@@ -62,8 +59,6 @@ class OrientationManager {
      * Handle orientation event
      */
     handleOrientation(event) {
-        // beta: front-to-back tilt (-180 to 180)
-        // gamma: left-to-right tilt (-90 to 90)
         let pitch = event.beta;
         let roll = event.gamma;
 
@@ -71,16 +66,10 @@ class OrientationManager {
             return;
         }
 
-        // Adjust for landscape orientation (camera held horizontally)
-        // When holding phone in landscape for rear camera, beta should be around 90
         const adjustedPitch = pitch - 90;
+        const isLevel = Math.abs(adjustedPitch) <= LEVEL_TOLERANCE_DEG &&
+                       Math.abs(roll) <= LEVEL_TOLERANCE_DEG;
 
-        // Check if level (within tolerance)
-        const isLevel =
-            Math.abs(adjustedPitch) <= LEVEL_TOLERANCE_DEG &&
-            Math.abs(roll) <= LEVEL_TOLERANCE_DEG;
-
-        // Update current orientation
         this.currentOrientation = {
             pitch_deg: Math.round(adjustedPitch * 10) / 10,
             roll_deg: Math.round(roll * 10) / 10,
@@ -88,7 +77,6 @@ class OrientationManager {
             level_tolerance_deg: LEVEL_TOLERANCE_DEG
         };
 
-        // Call update callback
         if (this.onUpdateCallback) {
             this.onUpdateCallback(this.currentOrientation);
         }

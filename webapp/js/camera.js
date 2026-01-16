@@ -16,7 +16,6 @@ class CameraManager {
     async init(videoElement) {
         this.video = videoElement;
 
-        // First try rear camera, then fallback to any camera
         const constraints = {
             video: {
                 facingMode: { ideal: 'environment' },
@@ -32,13 +31,10 @@ class CameraManager {
             console.log('Camera stream obtained:', this.stream);
 
             this.video.srcObject = this.stream;
-
-            // Ensure video plays
             this.video.setAttribute('playsinline', 'true');
             this.video.setAttribute('muted', 'true');
             this.video.setAttribute('autoplay', 'true');
 
-            // Wait for video to be ready
             await new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     reject(new Error('Video metadata timeout'));
@@ -46,7 +42,8 @@ class CameraManager {
 
                 this.video.onloadedmetadata = () => {
                     clearTimeout(timeout);
-                    console.log('Video metadata loaded, dimensions:', this.video.videoWidth, 'x', this.video.videoHeight);
+                    console.log('Video metadata loaded, dimensions:', 
+                        this.video.videoWidth, 'x', this.video.videoHeight);
                     this.video.play()
                         .then(() => {
                             console.log('Video playing');
@@ -54,7 +51,7 @@ class CameraManager {
                         })
                         .catch(err => {
                             console.error('Video play error:', err);
-                            resolve(); // Still resolve, autoplay might work
+                            resolve();
                         });
                 };
 
@@ -71,7 +68,6 @@ class CameraManager {
         } catch (error) {
             console.error('Camera access error:', error);
 
-            // User-friendly error messages
             let message = 'カメラにアクセスできませんでした。';
 
             if (error.name === 'NotAllowedError') {
@@ -81,10 +77,12 @@ class CameraManager {
             } else if (error.name === 'NotReadableError') {
                 message = 'カメラは他のアプリケーションで使用中です。';
             } else if (error.name === 'OverconstrainedError') {
-                // Try again with simpler constraints
                 console.log('Retrying with simpler constraints...');
                 try {
-                    this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
                     this.video.srcObject = this.stream;
                     await this.video.play();
                     this.isInitialized = true;
@@ -105,7 +103,6 @@ class CameraManager {
      */
     getVideoDimensions() {
         if (!this.video) return { width: 0, height: 0 };
-
         return {
             width: this.video.videoWidth,
             height: this.video.videoHeight
