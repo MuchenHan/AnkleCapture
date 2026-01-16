@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Build
+dist/
+build/
+
+# Research and Non-Webapp files
+.agent/
+Results/
+attachment/
+data/
+figures/
+manuscripts/
+reference/
+scripts/
+vercel.json
+attachment_figure/
+VERCEL_STEPS.md

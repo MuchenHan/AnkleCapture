@@ -1,0 +1,12 @@
+<svg viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left foot outline (lateral view) - Vertical/Straight -->
+  <path 
+    d="M 135,40 Q 138,200 132,280 Q 132,330 170,370 L 175,380 L 170,385 L 90,385 Q 70,385 75,330 Q 80,300 80,250 Q 60,180 85,40 Z"
+    fill="none"
+    stroke="rgba(37, 99, 235, 0.8)"
+    stroke-width="3"
+    stroke-dasharray="8,4"
+  />
+  
+
+</svg>
