@@ -146,6 +146,11 @@ class AnkleCaptureApp {
         }
 
         // Export screen buttons
+        const btnShare = document.getElementById('btn-share');
+        if (btnShare) {
+            btnShare.addEventListener('click', () => exportManager.shareFiles());
+        }
+
         const btnExportCSV = document.getElementById('btn-export-csv');
         if (btnExportCSV) {
             btnExportCSV.addEventListener('click', () => exportManager.exportCSV());
@@ -352,15 +357,18 @@ class AnkleCaptureApp {
     navigateToMeasurementScreen() {
         this.navigateToScreen('measurement');
 
-        const measurementCanvas = document.getElementById('measurement-canvas');
-        if (measurementCanvas && this.capturedImages) {
-            measurement.init(measurementCanvas, this.capturedImages.original);
-        }
+        // Use requestAnimationFrame to ensure DOM is fully rendered before initializing
+        requestAnimationFrame(() => {
+            const measurementCanvas = document.getElementById('measurement-canvas');
+            if (measurementCanvas && this.capturedImages) {
+                measurement.init(measurementCanvas, this.capturedImages.original);
+            }
 
-        // Update measurement counter
-        this.updateMeasurementCounter();
-        this.updateMeasurementList();
-        this.updateMeasurementButtons();
+            // Update measurement counter
+            this.updateMeasurementCounter();
+            this.updateMeasurementList();
+            this.updateMeasurementButtons();
+        });
     }
 
     /**

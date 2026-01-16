@@ -13,7 +13,8 @@ class ImportManager {
         this.checklist = {
             side_view: false,
             whole_foot: false,
-            no_distortion: false
+            no_distortion: false,
+            distance_ok: false
         };
         this.importedImage = null;
         this.isInitialized = false; // Track initialization state
@@ -40,8 +41,8 @@ class ImportManager {
         // Add file selection listener
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
 
-        // Setup checklist listeners
-        const checks = ['check-side-view', 'check-whole-foot', 'check-no-distortion'];
+        // Setup checklist listeners (4 items including distance check)
+        const checks = ['check-side-view', 'check-whole-foot', 'check-no-distortion', 'check-distance-ok'];
         checks.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -276,10 +277,11 @@ class ImportManager {
         this.checklist = {
             side_view: false,
             whole_foot: false,
-            no_distortion: false
+            no_distortion: false,
+            distance_ok: false
         };
 
-        ['check-side-view', 'check-whole-foot', 'check-no-distortion'].forEach(id => {
+        ['check-side-view', 'check-whole-foot', 'check-no-distortion', 'check-distance-ok'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.checked = false;
         });
@@ -294,7 +296,8 @@ class ImportManager {
         this.checklist = {
             side_view: document.getElementById('check-side-view')?.checked || false,
             whole_foot: document.getElementById('check-whole-foot')?.checked || false,
-            no_distortion: document.getElementById('check-no-distortion')?.checked || false
+            no_distortion: document.getElementById('check-no-distortion')?.checked || false,
+            distance_ok: document.getElementById('check-distance-ok')?.checked || false
         };
 
         const allChecked = Object.values(this.checklist).every(v => v);

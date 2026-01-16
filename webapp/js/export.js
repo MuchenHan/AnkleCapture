@@ -1,12 +1,20 @@
 /**
  * export.js - Data Export (Improved Version)
  * Handles CSV, JSON, and image export for multiple measurements
+ * Supports AirDrop via Web Share API on iOS
  */
 
 class ExportManager {
     constructor() {
         this.sessionData = null;
         this.measurements = [];
+    }
+
+    /**
+     * Check if Web Share API is available (for AirDrop on iOS)
+     */
+    canShare() {
+        return navigator.share && navigator.canShare;
     }
 
     /**
@@ -33,7 +41,10 @@ class ExportManager {
             return;
         }
 
-        // CSV header
+        // Get checklist fidelity data
+        const checklist = this.sessionData.checklist || {};
+
+        // CSV header (including fidelity checklist)
         const headers = [
             'session_id',
             'subject_id',
@@ -52,6 +63,10 @@ class ExportManager {
             'point3_x',
             'point3_y',
             'angle_value',
+            'fidelity_side_view',
+            'fidelity_whole_foot',
+            'fidelity_no_distortion',
+            'fidelity_distance_ok',
             'timestamp',
             'device_info'
         ];
@@ -76,6 +91,10 @@ class ExportManager {
                 m.points[2]?.x || '',
                 m.points[2]?.y || '',
                 m.angle_value,
+                checklist.side_view ? 'Yes' : 'No',
+                checklist.whole_foot ? 'Yes' : 'No',
+                checklist.no_distortion ? 'Yes' : 'No',
+                checklist.distance_ok ? 'Yes' : 'No',
                 m.timestamp || this.sessionData.timestamp,
                 this.sessionData.device_info
             ];
@@ -276,6 +295,79 @@ class ExportManager {
             minute: '2-digit',
             second: '2-digit'
         });
+    }
+
+    /**
+     * Share files via Web Share API (AirDrop on iOS)
+     */
+    async shareFiles() {
+        if (!this.sessionData || this.measurements.length === 0) {
+            alert('共有するデータがありません');
+            return;
+        }
+
+        if (!this.canShare()) {
+            alert('このブラウザは共有機能をサポートしていません。ダウンロードボタンをお使いください。');
+            return;
+        }
+
+        try {
+            const files = [];
+            const baseFilename = `${this.sanitizeFilename(this.sessionData.subject_id)}_${this.sessionData.side}_${this.formatTimestampForFilename(this.sessionData.timestamp)}`;
+
+            // Create CSV file
+            const checklist = this.sessionData.checklist || {};
+            const csvHeaders = [
+                'session_id', 'subject_id', 'operator_id', 'side', 'mode', 'measurement_type',
+                'measurement_num', 'point1_label', 'point1_x', 'point1_y',
+                'point2_label', 'point2_x', 'point2_y', 'point3_label', 'point3_x', 'point3_y',
+                'angle_value', 'fidelity_side_view', 'fidelity_whole_foot',
+                'fidelity_no_distortion', 'fidelity_distance_ok', 'timestamp', 'device_info'
+            ];
+            const csvRows = this.measurements.map((m, index) => [
+                this.sessionData.session_id, this.sessionData.subject_id,
+                this.sessionData.operator_id || '', this.sessionData.side,
+                this.sessionData.mode || 'realtime', this.sessionData.measurement_type,
+                index + 1, m.points[0]?.label || '', m.points[0]?.x || '', m.points[0]?.y || '',
+                m.points[1]?.label || '', m.points[1]?.x || '', m.points[1]?.y || '',
+                m.points[2]?.label || '', m.points[2]?.x || '', m.points[2]?.y || '',
+                m.angle_value, checklist.side_view ? 'Yes' : 'No',
+                checklist.whole_foot ? 'Yes' : 'No', checklist.no_distortion ? 'Yes' : 'No',
+                checklist.distance_ok ? 'Yes' : 'No',
+                m.timestamp || this.sessionData.timestamp, this.sessionData.device_info
+            ]);
+            const csvContent = '\uFEFF' + [csvHeaders.join(','), ...csvRows.map(row => row.map(v => `"${v}"`).join(','))].join('\n');
+            const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+            const csvFile = new File([csvBlob], `${baseFilename}.csv`, { type: 'text/csv' });
+            files.push(csvFile);
+
+            // Create image files
+            for (let i = 0; i < this.measurements.length; i++) {
+                const m = this.measurements[i];
+                if (m.overlay_image) {
+                    const imageBlob = await new Promise(resolve => m.overlay_image.toBlob(resolve, 'image/png'));
+                    const imageFile = new File([imageBlob], `${baseFilename}_measurement${i + 1}.png`, { type: 'image/png' });
+                    files.push(imageFile);
+                }
+            }
+
+            // Check if we can share these files
+            if (navigator.canShare && navigator.canShare({ files })) {
+                await navigator.share({
+                    files: files,
+                    title: `AnkleCapture - ${this.sessionData.subject_id}`,
+                    text: `足関節角度測定データ (${this.measurements.length}回測定)`
+                });
+                console.log('Files shared successfully via AirDrop/Share');
+            } else {
+                alert('このファイル形式は共有できません。ダウンロードボタンをお使いください。');
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Share failed:', error);
+                alert('共有に失敗しました。ダウンロードボタンをお使いください。');
+            }
+        }
     }
 }
 
