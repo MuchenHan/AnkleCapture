@@ -110,13 +110,15 @@ class ImportManager {
             this.importedImage = await this.loadImage(file, orientation);
             console.log('Image loaded, dimensions:', this.importedImage.width, 'x', this.importedImage.height);
 
-            // Show preview
-            console.log('Showing preview...');
-            this.showPreview(this.importedImage);
-
-            // Show modal
+            // Show modal first, then preview (modal must be visible for correct sizing)
             console.log('Showing modal...');
             this.showModal();
+
+            // Wait for modal to render, then show preview
+            console.log('Showing preview...');
+            requestAnimationFrame(() => {
+                this.showPreview(this.importedImage);
+            });
 
             return true;
         } catch (error) {
@@ -247,23 +249,43 @@ class ImportManager {
      * Show preview in modal
      */
     showPreview(imgCanvas) {
+        console.log('showPreview called with canvas:', imgCanvas?.width, 'x', imgCanvas?.height);
+
         if (!this.previewCanvas) {
             this.previewCanvas = document.getElementById('modal-preview-canvas');
         }
-        
-        if (!this.previewCanvas) return;
+
+        if (!this.previewCanvas) {
+            console.error('Preview canvas element not found');
+            return;
+        }
+
+        if (!imgCanvas) {
+            console.error('No image canvas provided');
+            return;
+        }
 
         const container = this.previewCanvas.parentElement;
-        if (!container) return;
-
-        const rect = container.getBoundingClientRect();
         const ratio = imgCanvas.height / imgCanvas.width;
 
-        this.previewCanvas.width = Math.min(rect.width, 400);
-        this.previewCanvas.height = this.previewCanvas.width * ratio;
+        // Use fixed width if container size is not available
+        let previewWidth = 350;
+        if (container) {
+            const rect = container.getBoundingClientRect();
+            if (rect.width > 0) {
+                previewWidth = Math.min(rect.width - 20, 400);
+            }
+        }
+
+        this.previewCanvas.width = previewWidth;
+        this.previewCanvas.height = previewWidth * ratio;
+
+        console.log('Preview canvas size:', this.previewCanvas.width, 'x', this.previewCanvas.height);
 
         const ctx = this.previewCanvas.getContext('2d');
         ctx.drawImage(imgCanvas, 0, 0, this.previewCanvas.width, this.previewCanvas.height);
+
+        console.log('Preview drawn successfully');
     }
 
     /**
