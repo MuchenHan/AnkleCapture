@@ -210,14 +210,14 @@ class MeasurementManager {
             
             // Notify app that measurement is complete
             if (window.app) {
-                app.enableAddMeasurementButton(true);
+                window.app.enableAddMeasurementButton(true);
             }
         } else {
             if (resultEl) resultEl.classList.add('hidden');
             if (btnAdd) btnAdd.disabled = true;
-            
+
             if (window.app) {
-                app.enableAddMeasurementButton(false);
+                window.app.enableAddMeasurementButton(false);
             }
         }
     }
