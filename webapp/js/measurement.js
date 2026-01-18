@@ -259,29 +259,80 @@ class MeasurementManager {
             this.ctx.stroke();
         }
 
-        // Draw points
+        // Draw crosshair points
         this.points.forEach((point, index) => {
-            this.ctx.fillStyle = '#EF4444';
-            this.ctx.strokeStyle = 'white';
-            this.ctx.lineWidth = 3;
-
-            this.ctx.beginPath();
-            this.ctx.arc(point.x, point.y, this.pointRadius, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
-
-            // Label
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = 'bold 16px sans-serif';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText((index + 1).toString(), point.x, point.y);
+            this.drawCrosshair(this.ctx, point.x, point.y, index, false);
         });
 
         // Draw angle arc if all points exist
         if (this.points.length === 3 && this.angleValue !== null) {
             this.drawAngleArc();
         }
+    }
+
+    /**
+     * Draw crosshair at specified position
+     */
+    drawCrosshair(ctx, x, y, index, forOverlay = false) {
+        const armLength = forOverlay ? 8 : 6;  // length of each arm
+        const lineWidth = 2;
+        const centerRadius = forOverlay ? 3 : 2;  // small center dot
+
+        // Draw crosshair lines with white outline for contrast
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = lineWidth + 2;
+        ctx.lineCap = 'round';
+
+        // Vertical line (outline)
+        ctx.beginPath();
+        ctx.moveTo(x, y - armLength);
+        ctx.lineTo(x, y + armLength);
+        ctx.stroke();
+
+        // Horizontal line (outline)
+        ctx.beginPath();
+        ctx.moveTo(x - armLength, y);
+        ctx.lineTo(x + armLength, y);
+        ctx.stroke();
+
+        // Draw crosshair lines (red)
+        ctx.strokeStyle = '#EF4444';
+        ctx.lineWidth = lineWidth;
+
+        // Vertical line
+        ctx.beginPath();
+        ctx.moveTo(x, y - armLength);
+        ctx.lineTo(x, y + armLength);
+        ctx.stroke();
+
+        // Horizontal line
+        ctx.beginPath();
+        ctx.moveTo(x - armLength, y);
+        ctx.lineTo(x + armLength, y);
+        ctx.stroke();
+
+        // Center dot
+        ctx.fillStyle = '#EF4444';
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, centerRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Label offset to top-right
+        const labelOffsetX = armLength + 8;
+        const labelOffsetY = -armLength - 4;
+        const label = forOverlay ? `P${index + 1}` : (index + 1).toString();
+
+        ctx.fillStyle = '#EF4444';
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2;
+        ctx.font = forOverlay ? 'bold 14px sans-serif' : 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.strokeText(label, x + labelOffsetX, y + labelOffsetY);
+        ctx.fillText(label, x + labelOffsetX, y + labelOffsetY);
     }
 
     /**
@@ -342,35 +393,22 @@ class MeasurementManager {
         ctx.lineTo(this.points[2].x, this.points[2].y);
         ctx.stroke();
 
-        // Draw points with labels
-        const labels = ['P1', 'P2', 'P3'];
+        // Draw crosshair points with labels
         const labelNames = ['腓骨頭', '外果', '第5中足骨頭'];
 
         this.points.forEach((point, index) => {
-            // Outer circle
-            ctx.fillStyle = '#EF4444';
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
+            // Draw crosshair
+            this.drawCrosshair(ctx, point.x, point.y, index, true);
 
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 18, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Point number
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(labels[index], point.x, point.y);
-
-            // Label name (offset from point)
+            // Anatomical label name (offset from point)
             ctx.fillStyle = '#1F2937';
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 3;
             ctx.font = 'bold 14px sans-serif';
-            
-            const offsetY = index === 1 ? 35 : -35; // P2 below, others above
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const offsetY = index === 1 ? 30 : -30; // P2 below, others above
             ctx.strokeText(labelNames[index], point.x, point.y + offsetY);
             ctx.fillText(labelNames[index], point.x, point.y + offsetY);
         });
