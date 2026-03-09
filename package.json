@@ -1,0 +1,34 @@
+{
+  "name": "ankle-capture",
+  "version": "2.0.0",
+  "description": "足関節角度測定システム - 臨床・研究用アプリケーション",
+  "main": "index.js",
+  "scripts": {
+    "start": "cd webapp && python3 -m http.server 8000",
+    "sync": "npx cap sync ios",
+    "open:ios": "npx cap open ios"
+  },
+  "keywords": [
+    "goniometer",
+    "ankle",
+    "dorsiflexion",
+    "ROM",
+    "rehabilitation"
+  ],
+  "author": "MuchenHan",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/camera": "^8.0.2",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/haptics": "^8.0.1",
+    "@capacitor/ios": "^8.2.0",
+    "@capacitor/keyboard": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
+    "playwright": "^1.58.2"
+  }
+}

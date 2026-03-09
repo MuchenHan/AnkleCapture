@@ -93,7 +93,7 @@ class CameraManager {
                 }
             }
 
-            alert(message);
+            ui.showToast(message, 'error', 5000);
             return false;
         }
     }

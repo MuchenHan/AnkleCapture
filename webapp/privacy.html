@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プライバシーポリシー - AnkleCapture</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.8;
+            color: #1F2937;
+            background: #F9FAFB;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 720px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #111827; }
+        h2 { font-size: 1.15rem; margin: 1.5rem 0 0.5rem; color: #1557B0; border-bottom: 2px solid #E5E7EB; padding-bottom: 0.25rem; }
+        p, li { font-size: 0.95rem; margin-bottom: 0.5rem; }
+        ul { margin-left: 1.5rem; margin-bottom: 1rem; }
+        .date { font-size: 0.85rem; color: #6B7280; margin-bottom: 1.5rem; }
+        .lang-toggle { text-align: right; margin-bottom: 1rem; }
+        .lang-toggle a { color: #1E6FD9; cursor: pointer; text-decoration: underline; }
+        .section { display: block; }
+        .section.hidden { display: none; }
+        hr { border: none; border-top: 1px solid #E5E7EB; margin: 2rem 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-toggle">
+            <a onclick="document.getElementById('ja').classList.remove('hidden');document.getElementById('en').classList.add('hidden');">日本語</a>
+            |
+            <a onclick="document.getElementById('en').classList.remove('hidden');document.getElementById('ja').classList.add('hidden');">English</a>
+        </div>
+
+        <!-- 日本語版 -->
+        <div id="ja" class="section">
+            <h1>プライバシーポリシー</h1>
+            <p class="date">最終更新日: 2026年3月9日</p>
+
+            <p>AnkleCapture（以下「本アプリ」）は、足関節角度を測定するためのツールです。本アプリは、ユーザーのプライバシーを尊重し、データの安全性を最優先に考えています。</p>
+
+            <h2>1. 収集するデータ</h2>
+            <p>本アプリは以下のデータを扱います：</p>
+            <ul>
+                <li><strong>カメラ映像・写真</strong>：足関節の角度測定のために使用します</li>
+                <li><strong>被験者ID・測定者ID</strong>：ユーザーが任意に入力する識別子です</li>
+                <li><strong>測定データ</strong>：角度値、座標点、タイムスタンプ</li>
+                <li><strong>デバイスの傾き情報</strong>：水平確認のために使用します</li>
+            </ul>
+
+            <h2>2. データの保存場所</h2>
+            <p><strong>すべてのデータはお使いのデバイス上にのみ保存されます。</strong></p>
+            <ul>
+                <li>データはデバイスのローカルストレージ（IndexedDB）に保存されます</li>
+                <li>外部サーバーへのデータ送信は一切行いません</li>
+                <li>クラウドサービスとの同期機能はありません</li>
+            </ul>
+
+            <h2>3. データの共有</h2>
+            <ul>
+                <li>本アプリはデータを第三者と共有しません</li>
+                <li>エクスポート機能（CSV、JSON、画像）はユーザーの操作によってのみ実行されます</li>
+                <li>AirDrop等の共有機能はユーザーが明示的に選択した場合のみ動作します</li>
+            </ul>
+
+            <h2>4. カメラ・センサーの使用</h2>
+            <ul>
+                <li><strong>カメラ</strong>：足関節の撮影および写真のインポートに使用します</li>
+                <li><strong>モーションセンサー</strong>：デバイスの傾きを検出し、水平を確認するために使用します</li>
+                <li>これらのアクセスはユーザーの許可が必要であり、いつでもデバイスの設定から無効化できます</li>
+            </ul>
+
+            <h2>5. 分析・トラッキング</h2>
+            <p>本アプリはアナリティクス、広告、トラッキングツールを一切使用しません。</p>
+
+            <h2>6. データの削除</h2>
+            <ul>
+                <li>アプリ内の「履歴」画面からいつでも測定データを削除できます</li>
+                <li>アプリを削除すると、すべてのデータが完全に消去されます</li>
+            </ul>
+
+            <h2>7. 医療データに関する注意</h2>
+            <p>本アプリで記録されるデータには身体の測定情報が含まれる可能性があります。データの安全管理はユーザーの責任において行ってください。デバイスのパスコード設定やFace ID/Touch IDの利用を推奨します。</p>
+
+            <h2>8. お問い合わせ</h2>
+            <p>プライバシーに関するご質問は、以下までお問い合わせください：</p>
+            <p>GitHub: <a href="https://github.com/MuchenHan/AnkleCapture">https://github.com/MuchenHan/AnkleCapture</a></p>
+        </div>
+
+        <!-- English Version -->
+        <div id="en" class="section hidden">
+            <h1>Privacy Policy</h1>
+            <p class="date">Last updated: March 9, 2026</p>
+
+            <p>AnkleCapture ("the App") is a tool for measuring ankle joint angles. The App respects user privacy and prioritizes data security.</p>
+
+            <h2>1. Data Collected</h2>
+            <p>The App handles the following data:</p>
+            <ul>
+                <li><strong>Camera images/photos</strong>: Used for ankle angle measurement</li>
+                <li><strong>Subject ID / Operator ID</strong>: User-defined identifiers entered voluntarily</li>
+                <li><strong>Measurement data</strong>: Angle values, coordinate points, timestamps</li>
+                <li><strong>Device orientation</strong>: Used for level/horizontal verification</li>
+            </ul>
+
+            <h2>2. Data Storage</h2>
+            <p><strong>All data is stored exclusively on your device.</strong></p>
+            <ul>
+                <li>Data is saved in local storage (IndexedDB) on your device</li>
+                <li>No data is transmitted to external servers</li>
+                <li>There is no cloud synchronization feature</li>
+            </ul>
+
+            <h2>3. Data Sharing</h2>
+            <ul>
+                <li>The App does not share data with third parties</li>
+                <li>Export features (CSV, JSON, images) are initiated only by user action</li>
+                <li>Sharing via AirDrop or similar services only occurs when explicitly chosen by the user</li>
+            </ul>
+
+            <h2>4. Camera & Sensor Usage</h2>
+            <ul>
+                <li><strong>Camera</strong>: Used for capturing ankle photos and importing existing photos</li>
+                <li><strong>Motion sensors</strong>: Used for detecting device tilt to verify horizontal alignment</li>
+                <li>These permissions require user consent and can be revoked at any time in device settings</li>
+            </ul>
+
+            <h2>5. Analytics & Tracking</h2>
+            <p>The App does not use any analytics, advertising, or tracking tools.</p>
+
+            <h2>6. Data Deletion</h2>
+            <ul>
+                <li>Measurement data can be deleted at any time from the "History" screen within the App</li>
+                <li>Uninstalling the App permanently removes all stored data</li>
+            </ul>
+
+            <h2>7. Medical Data Notice</h2>
+            <p>Data recorded by this App may include body measurement information. Users are responsible for ensuring data security on their devices. We recommend enabling device passcode, Face ID, or Touch ID.</p>
+
+            <h2>8. Contact</h2>
+            <p>For privacy-related inquiries, please contact us at:</p>
+            <p>GitHub: <a href="https://github.com/MuchenHan/AnkleCapture">https://github.com/MuchenHan/AnkleCapture</a></p>
+        </div>
+    </div>
+</body>
+</html>

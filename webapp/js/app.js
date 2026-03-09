@@ -36,6 +36,13 @@ class AnkleCaptureApp {
     async init() {
         console.log('AnkleCapture (Improved) initializing...');
 
+        // Lock to portrait orientation
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('portrait').catch(() => {
+                // Orientation lock not supported or not allowed
+            });
+        }
+
         // Check browser support
         const missingFeatures = [];
         if (!CameraManager.isSupported()) {
@@ -49,7 +56,7 @@ class AnkleCaptureApp {
         }
 
         if (missingFeatures.length > 0) {
-            alert(`このブラウザは以下の機能をサポートしていません:\n- ${missingFeatures.join('\n- ')}\n\niPhone Safari 13以降を推奨します。`);
+            ui.showToast(`未対応機能: ${missingFeatures.join(', ')}`, 'error', 5000);
             return;
         }
 
@@ -58,7 +65,12 @@ class AnkleCaptureApp {
             await storage.init();
         } catch (error) {
             console.error('Storage initialization failed:', error);
+            ui.showToast('データベースの初期化に失敗しました。ブラウザの設定を確認してください。', 'error', 10000);
+            // Don't return - app can still work for current session, just can't save
         }
+
+        // Initialize native bridge
+        await NativeBridge.init();
 
         // Initialize import manager
         if (window.importManager) {
@@ -72,6 +84,15 @@ class AnkleCaptureApp {
         this.sessionData.device_info = this.getDeviceInfo();
 
         console.log('AnkleCapture ready');
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     /**
@@ -170,15 +191,55 @@ class AnkleCaptureApp {
         if (btnNewMeasurement) {
             btnNewMeasurement.addEventListener('click', () => this.startNewMeasurement());
         }
+
+        // Undo point button
+        const btnUndoPoint = document.getElementById('btn-undo-point');
+        if (btnUndoPoint) {
+            btnUndoPoint.addEventListener('click', () => measurement.undoLastPoint());
+        }
+
+        // History screen buttons
+        const btnBackFromHistory = document.getElementById('btn-back-from-history');
+        if (btnBackFromHistory) {
+            btnBackFromHistory.addEventListener('click', () => this.navigateToScreen('subject'));
+        }
+
+        // Tab bar
+        document.querySelectorAll('.tab-bar-item').forEach(tab => {
+            tab.addEventListener('click', async () => {
+                const screen = tab.dataset.screen;
+                if (screen === 'history') {
+                    await this.navigateToHistory();
+                } else if (screen === 'subject') {
+                    this.navigateToScreen('subject');
+                }
+            });
+        });
+
+        // Initialize history UI event listeners
+        historyManager.initUI();
+
+        // Browser back button support
+        window.addEventListener('popstate', (e) => {
+            const backMap = {
+                'measurement': 'camera',
+                'camera': 'subject',
+                'export': 'subject',
+                'history': 'subject'
+            };
+            const target = backMap[this.currentScreen] || 'subject';
+            this.navigateToScreen(target);
+        });
     }
 
     /**
      * Handle subject form submission
      */
     async handleSubjectFormSubmit() {
-        // Get form data
-        this.sessionData.subject_id = document.getElementById('subject-id').value;
-        this.sessionData.operator_id = document.getElementById('operator-id').value;
+        NativeBridge.haptic('light');
+        // Get form data (trim whitespace)
+        this.sessionData.subject_id = document.getElementById('subject-id').value.trim();
+        this.sessionData.operator_id = document.getElementById('operator-id').value.trim();
         this.sessionData.side = document.querySelector('input[name="side"]:checked').value;
         
         const modeEl = document.querySelector('input[name="mode"]:checked');
@@ -217,6 +278,9 @@ class AnkleCaptureApp {
      * Navigate to screen
      */
     async navigateToScreen(screenName) {
+        // Push browser history state for back button support
+        history.pushState({ screen: screenName }, '', '');
+
         document.querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
         });
@@ -228,10 +292,40 @@ class AnkleCaptureApp {
 
         this.currentScreen = screenName;
 
+        // Update tab bar visibility and active state
+        const tabBar = document.getElementById('tab-bar');
+        if (tabBar) {
+            // Hide tab bar on camera and measurement screens
+            const hideOnScreens = ['camera', 'measurement'];
+            tabBar.style.display = hideOnScreens.includes(screenName) ? 'none' : 'flex';
+
+            // Update active tab
+            document.querySelectorAll('.tab-bar-item').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.screen === screenName ||
+                    (screenName === 'export' && tab.dataset.screen === 'subject'));
+            });
+        }
+
+        // Add bottom padding for tab bar on screens where it's visible
+        document.querySelectorAll('.screen .content').forEach(content => {
+            content.style.paddingBottom = '';
+        });
+        if (!['camera', 'measurement'].includes(screenName)) {
+            const activeContent = targetScreen ? targetScreen.querySelector('.content') : null;
+            if (activeContent) {
+                activeContent.style.paddingBottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
+            }
+        }
+
+        // Switch status bar style based on screen
         if (screenName === 'camera') {
+            NativeBridge.setStatusBarForCamera();
             await this.initCameraScreen();
-        } else if (screenName === 'subject') {
-            this.cleanupCameraScreen();
+        } else {
+            NativeBridge.setStatusBarForContent();
+            if (screenName === 'subject') {
+                this.cleanupCameraScreen();
+            }
         }
     }
 
@@ -239,10 +333,13 @@ class AnkleCaptureApp {
      * Initialize camera screen
      */
     async initCameraScreen() {
+        this.showLoading(true);
+
         const video = document.getElementById('camera-preview');
         const canvas = document.getElementById('overlay-canvas');
 
         const success = await camera.init(video);
+        this.showLoading(false);
         if (!success) {
             this.navigateToScreen('subject');
             return;
@@ -341,6 +438,13 @@ class AnkleCaptureApp {
      * For import mode: re-select file, for realtime mode: go back to camera
      */
     handleBackFromMeasurement() {
+        // Confirm if measurements exist
+        if (this.measurements.length > 0) {
+            if (!confirm('測定データが保存されていません。戻りますか？')) {
+                return;
+            }
+        }
+
         // Reset current measurements
         this.measurements = [];
 
@@ -357,6 +461,7 @@ class AnkleCaptureApp {
      * Handle capture button
      */
     handleCapture() {
+        NativeBridge.haptic('medium');
         this.capturedImages = capture.capture();
 
         if (!this.capturedImages) {
@@ -421,8 +526,8 @@ class AnkleCaptureApp {
             const item = document.createElement('div');
             item.className = 'measurement-item';
             item.innerHTML = `
-                <span class="measurement-num">#${index + 1}</span>
-                <span class="measurement-angle">${m.angle_value}°</span>
+                <span class="measurement-num">#${this.escapeHtml(String(index + 1))}</span>
+                <span class="measurement-angle">${this.escapeHtml(String(m.angle_value))}°</span>
                 <button class="btn btn-small btn-danger" data-index="${index}">削除</button>
             `;
             
@@ -454,37 +559,97 @@ class AnkleCaptureApp {
     }
 
     /**
-     * Handle adding current measurement to list
+     * Convert a canvas element to a Blob
      */
-    handleAddMeasurement() {
+    async canvasToBlob(canvas, type = 'image/png', quality = 1.0) {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(blob);
+                } else {
+                    reject(new Error('Canvas toBlob returned null'));
+                }
+            }, type, quality);
+        });
+    }
+
+    /**
+     * Generate a thumbnail Blob from a canvas (200px wide, JPEG 0.8)
+     */
+    async generateThumbnail(canvas, maxWidth = 200) {
+        const ratio = canvas.height / canvas.width;
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = maxWidth;
+        thumbCanvas.height = Math.round(maxWidth * ratio);
+        const ctx = thumbCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        return this.canvasToBlob(thumbCanvas, 'image/jpeg', 0.8);
+    }
+
+    /**
+     * Handle adding current measurement to list (async for Blob conversion)
+     */
+    async handleAddMeasurement() {
         const measurementData = measurement.getMeasurementData();
-        
+
         if (!measurementData.angle_value) {
-            alert('測定が完了していません');
+            ui.showToast('測定が完了していません', 'error');
             return;
         }
 
         // Generate overlay image with points and angle
         const overlayCanvas = measurement.generateOverlayImage();
 
-        // Add to measurements array
+        // Convert canvas elements to Blobs for IndexedDB storage
+        let originalBlob = null;
+        let overlayBlob = null;
+        let thumbnailBlob = null;
+
+        try {
+            originalBlob = await this.canvasToBlob(this.capturedImages.original);
+        } catch (e) {
+            console.warn('Failed to convert original image to Blob:', e);
+            ui.showToast('元画像の変換に失敗しました', 'error');
+        }
+
+        try {
+            overlayBlob = await this.canvasToBlob(overlayCanvas);
+        } catch (e) {
+            console.warn('Failed to convert overlay image to Blob:', e);
+            ui.showToast('オーバーレイ画像の変換に失敗しました', 'error');
+        }
+
+        try {
+            thumbnailBlob = await this.generateThumbnail(overlayCanvas);
+        } catch (e) {
+            console.warn('Failed to generate thumbnail:', e);
+        }
+
+        // Release overlay canvas memory after Blob conversion
+        MeasurementManager.releaseCanvas(overlayCanvas);
+
+        // Add to measurements array with Blobs (not canvas references)
+        // Save even if images failed — angle data is still valuable
         this.measurements.push({
             measurement_num: this.measurements.length + 1,
             points: measurementData.points,
             angle_value: measurementData.angle_value,
-            original_image: this.capturedImages.original,
-            overlay_image: overlayCanvas,
+            original_image: originalBlob,
+            overlay_image: overlayBlob,
+            thumbnail_image: thumbnailBlob,
             timestamp: new Date().toISOString()
         });
 
         // Reset for next measurement
         measurement.reset();
-        
+
         // Update UI
         this.updateMeasurementCounter();
         this.updateMeasurementList();
         this.updateMeasurementButtons();
 
+        ui.showToast(`測定 #${this.measurements.length} を追加 (${measurementData.angle_value}°)`, 'success');
+        NativeBridge.haptic('medium');
         console.log(`Measurement #${this.measurements.length} added: ${measurementData.angle_value}°`);
     }
 
@@ -511,9 +676,14 @@ class AnkleCaptureApp {
      */
     async handleFinishMeasurements() {
         if (this.measurements.length === 0) {
-            alert('少なくとも1回の測定が必要です');
+            ui.showToast('少なくとも1回の測定が必要です', 'error');
             return;
         }
+
+        // Show loading and disable finish button
+        const btnFinish = document.getElementById('btn-finish-measurements');
+        if (btnFinish) btnFinish.disabled = true;
+        this.showLoading(true);
 
         // Save all measurements to IndexedDB
         try {
@@ -521,13 +691,21 @@ class AnkleCaptureApp {
                 ...this.sessionData,
                 measurements: this.measurements
             });
+            ui.showToast('データを保存しました', 'success');
+            NativeBridge.haptic('success');
             console.log('All measurements saved to IndexedDB');
         } catch (error) {
             console.error('Failed to save measurements:', error);
+            ui.showToast('保存に失敗しました', 'error');
+        } finally {
+            this.showLoading(false);
+            if (btnFinish) btnFinish.disabled = false;
         }
 
-        // Set export data
-        exportManager.setData(this.sessionData, this.measurements);
+        // Set export data (shallow copy to avoid holding live references)
+        const sessionCopy = { ...this.sessionData };
+        const measurementsCopy = this.measurements.map(m => ({ ...m }));
+        exportManager.setData(sessionCopy, measurementsCopy);
 
         // Navigate to export screen
         this.navigateToExportScreen();
@@ -539,12 +717,12 @@ class AnkleCaptureApp {
     navigateToExportScreen() {
         this.navigateToScreen('export');
 
-        // Update summary display
+        // Update summary display (textContent is XSS-safe)
         document.getElementById('export-subject-id').textContent = this.sessionData.subject_id;
-        document.getElementById('export-side').textContent = 
+        document.getElementById('export-side').textContent =
             this.sessionData.side === 'L' ? '左脚 (L)' : '右脚 (R)';
         document.getElementById('export-count').textContent = this.measurements.length;
-        document.getElementById('export-timestamp').textContent = 
+        document.getElementById('export-timestamp').textContent =
             exportManager.formatTimestampForDisplay(this.sessionData.timestamp);
 
         // Populate results table
@@ -562,12 +740,13 @@ class AnkleCaptureApp {
 
         this.measurements.forEach((m, index) => {
             const row = document.createElement('tr');
+            const esc = (v) => this.escapeHtml(String(v));
             row.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${m.angle_value}</td>
-                <td>(${m.points[0]?.x || '--'}, ${m.points[0]?.y || '--'})</td>
-                <td>(${m.points[1]?.x || '--'}, ${m.points[1]?.y || '--'})</td>
-                <td>(${m.points[2]?.x || '--'}, ${m.points[2]?.y || '--'})</td>
+                <td>${esc(index + 1)}</td>
+                <td>${esc(m.angle_value)}</td>
+                <td>(${esc(m.points[0]?.x ?? '--')}, ${esc(m.points[0]?.y ?? '--')})</td>
+                <td>(${esc(m.points[1]?.x ?? '--')}, ${esc(m.points[1]?.y ?? '--')})</td>
+                <td>(${esc(m.points[2]?.x ?? '--')}, ${esc(m.points[2]?.y ?? '--')})</td>
             `;
             tbody.appendChild(row);
         });
@@ -602,9 +781,22 @@ class AnkleCaptureApp {
         };
 
         this.measurements = [];
+        // Release captured image canvas memory before discarding reference
+        if (this.capturedImages?.original) {
+            this.capturedImages.original.width = 0;
+            this.capturedImages.original.height = 0;
+        }
         this.capturedImages = null;
 
         this.navigateToScreen('subject');
+    }
+
+    /**
+     * Navigate to history screen and load sessions
+     */
+    async navigateToHistory() {
+        await this.navigateToScreen('history');
+        await historyManager.loadSessions();
     }
 
     /**
@@ -621,6 +813,16 @@ class AnkleCaptureApp {
         const btnAdd = document.getElementById('btn-add-measurement');
         if (btnAdd) {
             btnAdd.disabled = !enabled;
+        }
+    }
+
+    /**
+     * Show/hide loading overlay
+     */
+    showLoading(show) {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.toggle('active', show);
         }
     }
 }

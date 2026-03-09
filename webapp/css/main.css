@@ -3,8 +3,8 @@
    ============================================ */
 
 :root {
-    --primary: #2563EB;
-    --primary-dark: #1E40AF;
+    --primary: #1E6FD9;
+    --primary-dark: #1557B0;
     --success: #10B981;
     --success-dark: #059669;
     --warning: #F59E0B;
@@ -30,10 +30,11 @@
     --border-radius-lg: 1rem;
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --transition-fast: 150ms ease;
+    --transition-screen: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { font-size: 16px; }
+html { font-size: 16px; font-feature-settings: "tnum"; }
 body {
     font-family: var(--font-base);
     font-size: var(--font-size-base);
@@ -41,17 +42,35 @@ body {
     color: var(--neutral-900);
     background: var(--neutral-100);
     -webkit-font-smoothing: antialiased;
+    /* safe-area-inset-top handled per-header to avoid doubling */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .screen { display: none; min-height: 100vh; flex-direction: column; }
-.screen.active { display: flex; }
+.screen.active { display: flex; animation: screenSlideIn var(--transition-screen) forwards; }
+.screen.slide-out-left { animation: screenSlideOutLeft var(--transition-screen) forwards; }
+.screen.slide-out-right { animation: screenSlideOutRight var(--transition-screen) forwards; }
+
+@keyframes screenSlideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes screenSlideOutLeft {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(-30px); }
+}
+@keyframes screenSlideOutRight {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(30px); }
+}
 .hidden { display: none !important; }
 
 .app-header {
     background: var(--primary);
     color: white;
-    padding: var(--spacing-md);
+    padding: calc(env(safe-area-inset-top, 0px) + var(--spacing-md)) var(--spacing-md) var(--spacing-md);
     text-align: center;
+    position: relative;
 }
 .app-header h1 { font-size: var(--font-size-xl); font-weight: 700; }
 .app-header h2 { font-size: var(--font-size-lg); font-weight: 600; }
@@ -61,7 +80,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: calc(var(--spacing-sm) + env(safe-area-inset-top)) var(--spacing-md) var(--spacing-sm);
 }
 .measurement-header h2 { flex: 1; text-align: center; }
 .measurement-counter {
@@ -229,3 +248,133 @@ body {
 .export-options h3 { margin-bottom: var(--spacing-sm); }
 .export-options .btn { margin-bottom: var(--spacing-sm); }
 .export-actions { margin-top: var(--spacing-md); }
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+.toast-container {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 1rem);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+    width: 90%;
+    max-width: 400px;
+}
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-radius: 0.75rem;
+    background: var(--neutral-800);
+    color: white;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(-1rem);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+}
+.toast-show { opacity: 1; transform: translateY(0); }
+.toast-hide { opacity: 0; transform: translateY(-1rem); }
+.toast-success { background: var(--success); }
+.toast-error { background: var(--danger); }
+.toast-info { background: var(--primary); }
+.toast-icon { font-size: 1.1rem; font-weight: 700; }
+
+/* ============================================
+   Bottom Tab Bar
+   ============================================ */
+.tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: white;
+    border-top: 1px solid var(--neutral-200);
+    padding: 0.5rem 0;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+.tab-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--neutral-700);
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+.tab-bar-item.active { color: var(--primary); }
+.tab-bar-item.disabled { opacity: 0.35; pointer-events: none; }
+.tab-bar-item svg { width: 24px; height: 24px; }
+.tab-bar-item .tab-icon { font-size: 1.5rem; line-height: 1; }
+
+/* ============================================
+   Camera Capture Button (iOS style)
+   ============================================ */
+.btn-capture {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: white;
+    border: 5px solid rgba(255,255,255,0.3);
+    box-shadow: 0 0 0 3px var(--primary), inset 0 0 0 2px rgba(0,0,0,0.1);
+    font-size: 0;
+    color: transparent;
+    position: relative;
+}
+.btn-capture::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.15s ease;
+}
+.btn-capture:active:not(:disabled)::after { transform: scale(0.9); }
+.btn-capture:disabled {
+    opacity: 0.4;
+    box-shadow: 0 0 0 3px var(--neutral-300);
+}
+
+/* ============================================
+   Loading Overlay (U7)
+   ============================================ */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    pointer-events: all;
+}
+.loading-overlay.active { display: flex; }
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

@@ -6,8 +6,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
-    background: rgba(0, 0, 0, 0.8);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    padding-right: 1rem;
+    padding-bottom: 0.75rem;
+    padding-left: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     color: white;
 }
 
@@ -188,18 +193,10 @@
     font-weight: 600;
 }
 
-.btn-capture {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: white;
-    border: 4px solid var(--primary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--neutral-800);
+/* Prevent iOS rubber-band scrolling on camera screen */
+#screen-camera {
+    overflow: hidden;
+    touch-action: none;
 }
 
-.btn-capture:disabled {
-    opacity: 0.4;
-    border-color: var(--neutral-300);
-}
+/* btn-capture styles moved to main.css (iOS camera style) */

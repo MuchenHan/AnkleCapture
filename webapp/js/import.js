@@ -76,7 +76,7 @@ class ImportManager {
         if (this.fileInput) {
             this.fileInput.click();
         } else {
-            alert('ファイル入力要素が見つかりません。ページを再読み込みしてください。');
+            ui.showToast('ファイル入力エラー。ページを再読み込みしてください。', 'error');
         }
     }
 
@@ -108,7 +108,7 @@ class ImportManager {
             return true;
         } catch (error) {
             console.error('Import failed:', error);
-            alert('画像の読み込みに失敗しました');
+            ui.showToast('画像の読み込みに失敗しました', 'error');
             return false;
         } finally {
             // Reset input so same file can be selected again
@@ -119,6 +119,14 @@ class ImportManager {
     }
 
     /**
+     * Check if browser auto-corrects EXIF orientation.
+     * Modern browsers (Chrome 81+, Firefox 26+, Safari 13.4+) handle this natively.
+     */
+    _browserHandlesExif() {
+        return CSS.supports && CSS.supports('image-orientation', 'from-image');
+    }
+
+    /**
      * Load image, fix orientation, and downsample
      */
     loadImage(file, orientation) {
@@ -126,6 +134,7 @@ class ImportManager {
             const img = new Image();
 
             img.onload = () => {
+                URL.revokeObjectURL(img.src);
                 // Calculate new dimensions (downsampling)
                 let width = img.width;
                 let height = img.height;
@@ -143,8 +152,12 @@ class ImportManager {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
+                // Skip manual EXIF rotation if browser handles it natively
+                const needsManualRotation = orientation > 1 && !this._browserHandlesExif();
+                const effectiveOrientation = needsManualRotation ? orientation : 1;
+
                 // Handle orientation
-                if (4 < orientation && orientation < 9) {
+                if (4 < effectiveOrientation && effectiveOrientation < 9) {
                     canvas.width = height;
                     canvas.height = width;
                 } else {
@@ -153,7 +166,7 @@ class ImportManager {
                 }
 
                 // Transform context based on orientation
-                switch (orientation) {
+                switch (effectiveOrientation) {
                     case 2: ctx.transform(-1, 0, 0, 1, width, 0); break;
                     case 3: ctx.transform(-1, 0, 0, -1, width, height); break;
                     case 4: ctx.transform(1, 0, 0, -1, 0, height); break;
@@ -170,7 +183,10 @@ class ImportManager {
                 resolve(canvas);
             };
 
-            img.onerror = reject;
+            img.onerror = () => {
+                URL.revokeObjectURL(img.src);
+                reject(new Error('Failed to load image'));
+            };
             img.src = URL.createObjectURL(file);
         });
     }
@@ -194,22 +210,34 @@ class ImportManager {
                 let offset = 2;
 
                 while (offset < length) {
+                    // Bounds check before reading marker (getUint16)
+                    if (offset + 2 > length) break;
                     const marker = view.getUint16(offset, false);
                     offset += 2;
 
                     if (marker == 0xFFE1) {
+                        // Bounds check before reading Exif header (getUint32 at offset+2)
+                        if (offset + 6 > length) { resolve(-1); return; }
                         if (view.getUint32(offset + 2, false) != 0x45786966) {
                             resolve(-1); // Not Exif
                             return;
                         }
 
+                        // Bounds check before reading byte order (getUint16 at offset+8)
+                        if (offset + 10 > length) { resolve(-1); return; }
                         const little = view.getUint16(offset + 8, false) == 0x4949;
                         offset += 8;
+                        // Bounds check before reading IFD offset (getUint32 at offset+4)
+                        if (offset + 8 > length) { resolve(-1); return; }
                         const ifdOffset = view.getUint32(offset + 4, little);
+                        // Bounds check before reading tag count (getUint16)
+                        if (offset + ifdOffset + 2 > length) { resolve(-1); return; }
                         const tags = view.getUint16(offset + ifdOffset, little);
 
                         for (let i = 0; i < tags; i++) {
                             const current = offset + ifdOffset + 2 + (i * 12);
+                            // Bounds check before reading tag entry (needs 12 bytes)
+                            if (current + 12 > length) break;
                             if (view.getUint16(current, little) == 0x0112) {
                                 resolve(view.getUint16(current + 8, little));
                                 return;
@@ -218,6 +246,8 @@ class ImportManager {
                     } else if ((marker & 0xFF00) != 0xFF00) {
                         break;
                     } else {
+                        // Bounds check before reading segment length (getUint16)
+                        if (offset + 2 > length) break;
                         offset += view.getUint16(offset, false);
                     }
                 }
@@ -322,7 +352,7 @@ class ImportManager {
      */
     confirmImport() {
         if (!this.importedImage) {
-            alert('エラー: 画像が読み込まれていません');
+            ui.showToast('画像が読み込まれていません', 'error');
             return;
         }
 
@@ -332,7 +362,7 @@ class ImportManager {
         if (window.app) {
             window.app.handleImportComplete(this.importedImage, this.checklist, this.importedFileName);
         } else {
-            alert('エラー: アプリが初期化されていません。ページを再読み込みしてください。');
+            ui.showToast('アプリ未初期化。ページを再読み込みしてください。', 'error');
         }
     }
 

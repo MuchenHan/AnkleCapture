@@ -29,7 +29,7 @@ class OrientationManager {
                 return permission === 'granted';
             } catch (error) {
                 console.error('Motion permission error:', error);
-                alert('デバイスの傾き検出の許可が必要です。');
+                ui.showToast('傾き検出の許可が必要です', 'info');
                 return false;
             }
         }

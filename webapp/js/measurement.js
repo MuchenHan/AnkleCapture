@@ -17,6 +17,17 @@ class MeasurementManager {
     }
 
     /**
+     * Get the ratio of canvas resolution to CSS display size.
+     * All drawing sizes must be multiplied by this to appear correct on screen.
+     */
+    getDisplayScale() {
+        if (!this.canvas) return 1;
+        const rect = this.canvas.getBoundingClientRect();
+        if (rect.width === 0) return 1;
+        return this.canvas.width / rect.width;
+    }
+
+    /**
      * Initialize measurement canvas
      */
     init(canvasElement, imageCanvas) {
@@ -125,10 +136,13 @@ class MeasurementManager {
      */
     handlePointerDown(x, y) {
         // Check if clicking on existing point for dragging
+        // Use 44 CSS px minimum hit area (Apple HIG), converted to canvas pixels
+        const displayScale = this.getDisplayScale();
+        const hitRadius = Math.max(this.pointRadius * 2, 44 * displayScale);
         for (let i = 0; i < this.points.length; i++) {
             const point = this.points[i];
             const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
-            if (distance < this.pointRadius * 2) {
+            if (distance < hitRadius) {
                 this.isDragging = true;
                 this.dragPointIndex = i;
                 return;
@@ -138,6 +152,7 @@ class MeasurementManager {
         // Add new point if not at max
         if (this.points.length < this.maxPoints) {
             this.points.push({ x, y });
+            if (window.NativeBridge) NativeBridge.haptic('medium');
             this.updatePointLabels();
             this.draw();
 
@@ -242,13 +257,15 @@ class MeasurementManager {
     draw() {
         if (!this.ctx || !this.image) return;
 
+        const s = this.getDisplayScale();
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.drawImage(this.image, 0, 0);
 
         // Draw lines between points
         if (this.points.length >= 2) {
-            this.ctx.strokeStyle = '#2563EB';
-            this.ctx.lineWidth = 3;
+            this.ctx.strokeStyle = '#1E6FD9';
+            this.ctx.lineWidth = 3 * s;
             this.ctx.lineCap = 'round';
 
             this.ctx.beginPath();
@@ -261,26 +278,27 @@ class MeasurementManager {
 
         // Draw crosshair points
         this.points.forEach((point, index) => {
-            this.drawCrosshair(this.ctx, point.x, point.y, index, false);
+            this.drawCrosshair(this.ctx, point.x, point.y, index, false, s);
         });
 
         // Draw angle arc if all points exist
         if (this.points.length === 3 && this.angleValue !== null) {
-            this.drawAngleArc();
+            this.drawAngleArc(s);
         }
     }
 
     /**
      * Draw crosshair at specified position
      */
-    drawCrosshair(ctx, x, y, index, forOverlay = false) {
-        const armLength = forOverlay ? 8 : 6;  // length of each arm
-        const lineWidth = 2;
-        const centerRadius = forOverlay ? 3 : 2;  // small center dot
+    drawCrosshair(ctx, x, y, index, forOverlay = false, scale = 1) {
+        const s = scale;
+        const armLength = (forOverlay ? 8 : 6) * s;
+        const lineWidth = 2 * s;
+        const centerRadius = (forOverlay ? 3 : 2) * s;
 
         // Draw crosshair lines with white outline for contrast
         ctx.strokeStyle = 'white';
-        ctx.lineWidth = lineWidth + 2;
+        ctx.lineWidth = lineWidth + 2 * s;
         ctx.lineCap = 'round';
 
         // Vertical line (outline)
@@ -314,21 +332,22 @@ class MeasurementManager {
         // Center dot
         ctx.fillStyle = '#EF4444';
         ctx.strokeStyle = 'white';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1 * s;
         ctx.beginPath();
         ctx.arc(x, y, centerRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
         // Label offset to top-right
-        const labelOffsetX = armLength + 8;
-        const labelOffsetY = -armLength - 4;
+        const labelOffsetX = armLength + 8 * s;
+        const labelOffsetY = -armLength - 4 * s;
         const label = forOverlay ? `P${index + 1}` : (index + 1).toString();
 
         ctx.fillStyle = '#EF4444';
         ctx.strokeStyle = 'white';
-        ctx.lineWidth = 2;
-        ctx.font = forOverlay ? 'bold 14px sans-serif' : 'bold 12px sans-serif';
+        ctx.lineWidth = 2 * s;
+        const fontSize = forOverlay ? Math.round(14 * s) : Math.round(12 * s);
+        ctx.font = `bold ${fontSize}px sans-serif`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
         ctx.strokeText(label, x + labelOffsetX, y + labelOffsetY);
@@ -338,27 +357,29 @@ class MeasurementManager {
     /**
      * Draw angle arc
      */
-    drawAngleArc() {
+    drawAngleArc(scale = 1) {
+        const s = scale;
         const [p1, p2, p3] = this.points;
 
         const angle1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
         const angle2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
 
-        const arcRadius = 50;
+        const arcRadius = 50 * s;
 
         this.ctx.strokeStyle = '#10B981';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2 * s;
         this.ctx.beginPath();
         this.ctx.arc(p2.x, p2.y, arcRadius, angle1, angle2, false);
         this.ctx.stroke();
 
         // Draw angle text
         const midAngle = (angle1 + angle2) / 2;
-        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 25);
-        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 25);
+        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 25 * s);
+        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 25 * s);
 
         this.ctx.fillStyle = '#10B981';
-        this.ctx.font = 'bold 20px sans-serif';
+        const fontSize = Math.round(20 * s);
+        this.ctx.font = `bold ${fontSize}px sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.fillText(`${this.angleValue.toFixed(3)}°`, textX, textY);
     }
@@ -378,12 +399,16 @@ class MeasurementManager {
         overlayCanvas.height = this.image.height;
         const ctx = overlayCanvas.getContext('2d');
 
+        // Overlay is offscreen — use same display scale so annotations
+        // are proportionally sized relative to the high-res image
+        const s = this.getDisplayScale();
+
         // Draw original image
         ctx.drawImage(this.image, 0, 0);
 
         // Draw lines between points
-        ctx.strokeStyle = '#2563EB';
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#1E6FD9';
+        ctx.lineWidth = 4 * s;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
@@ -398,17 +423,18 @@ class MeasurementManager {
 
         this.points.forEach((point, index) => {
             // Draw crosshair
-            this.drawCrosshair(ctx, point.x, point.y, index, true);
+            this.drawCrosshair(ctx, point.x, point.y, index, true, s);
 
             // Anatomical label name (offset from point)
             ctx.fillStyle = '#1F2937';
             ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
-            ctx.font = 'bold 14px sans-serif';
+            ctx.lineWidth = 3 * s;
+            const labelFontSize = Math.round(14 * s);
+            ctx.font = `bold ${labelFontSize}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const offsetY = index === 1 ? 30 : -30; // P2 below, others above
+            const offsetY = (index === 1 ? 30 : -30) * s; // P2 below, others above
             ctx.strokeText(labelNames[index], point.x, point.y + offsetY);
             ctx.fillText(labelNames[index], point.x, point.y + offsetY);
         });
@@ -417,33 +443,34 @@ class MeasurementManager {
         const [p1, p2, p3] = this.points;
         const angle1 = Math.atan2(p1.y - p2.y, p1.x - p2.x);
         const angle2 = Math.atan2(p3.y - p2.y, p3.x - p2.x);
-        const arcRadius = 60;
+        const arcRadius = 60 * s;
 
         ctx.strokeStyle = '#10B981';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * s;
         ctx.beginPath();
         ctx.arc(p2.x, p2.y, arcRadius, angle1, angle2, false);
         ctx.stroke();
 
         // Draw angle value with background
         const midAngle = (angle1 + angle2) / 2;
-        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 40);
-        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 40);
+        const textX = p2.x + Math.cos(midAngle) * (arcRadius + 40 * s);
+        const textY = p2.y + Math.sin(midAngle) * (arcRadius + 40 * s);
 
         const angleText = `${this.angleValue.toFixed(3)}°`;
-        ctx.font = 'bold 24px sans-serif';
+        const angleFontSize = Math.round(24 * s);
+        ctx.font = `bold ${angleFontSize}px sans-serif`;
         const textMetrics = ctx.measureText(angleText);
-        const padding = 8;
+        const padding = 8 * s;
 
         // Background rectangle
         ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
         ctx.beginPath();
         ctx.roundRect(
             textX - textMetrics.width / 2 - padding,
-            textY - 14 - padding,
+            textY - 14 * s - padding,
             textMetrics.width + padding * 2,
-            28 + padding * 2,
-            5
+            28 * s + padding * 2,
+            5 * s
         );
         ctx.fill();
 
@@ -457,13 +484,42 @@ class MeasurementManager {
         const timestamp = new Date().toLocaleString('ja-JP');
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.font = '12px sans-serif';
+        ctx.lineWidth = 2 * s;
+        const stampFontSize = Math.round(12 * s);
+        ctx.font = `${stampFontSize}px sans-serif`;
         ctx.textAlign = 'right';
-        ctx.strokeText(timestamp, this.image.width - 10, this.image.height - 10);
-        ctx.fillText(timestamp, this.image.width - 10, this.image.height - 10);
+        ctx.strokeText(timestamp, this.image.width - 10 * s, this.image.height - 10 * s);
+        ctx.fillText(timestamp, this.image.width - 10 * s, this.image.height - 10 * s);
 
         return overlayCanvas;
+    }
+
+    /**
+     * Release an overlay canvas to free GPU/memory.
+     * Call after converting to Blob.
+     */
+    static releaseCanvas(canvas) {
+        if (canvas) {
+            canvas.width = 0;
+            canvas.height = 0;
+        }
+    }
+
+    /**
+     * Undo last placed point
+     */
+    undoLastPoint() {
+        if (this.points.length === 0) return;
+        this.points.pop();
+        this.angleValue = null;
+        this.updateAngleDisplay();
+        this.updatePointLabels();
+        this.draw();
+
+        // Recalculate if we still have 3 points (shouldn't happen after undo)
+        if (this.points.length === this.maxPoints) {
+            this.calculateAngle();
+        }
     }
 
     /**

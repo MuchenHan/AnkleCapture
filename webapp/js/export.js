@@ -26,6 +26,20 @@ class ExportManager {
     }
 
     /**
+     * Escape value for CSV: double internal quotes, prefix formula-triggering chars
+     */
+    escapeCsvValue(value) {
+        let str = String(value);
+        // Escape double quotes
+        str = str.replace(/"/g, '""');
+        // Prefix formula-triggering characters to prevent CSV injection
+        if (/^[=+\-@\t\r]/.test(str)) {
+            str = "'" + str;
+        }
+        return `"${str}"`;
+    }
+
+    /**
      * Sanitize filename to remove invalid characters
      */
     sanitizeFilename(str) {
@@ -64,7 +78,7 @@ class ExportManager {
      */
     exportCSV() {
         if (!this.sessionData || this.measurements.length === 0) {
-            alert('エクスポートするデータがありません');
+            ui.showToast('エクスポートするデータがありません', 'error');
             return;
         }
 
@@ -112,14 +126,14 @@ class ExportManager {
                 this.sessionData.measurement_type,
                 index + 1,
                 m.points[0]?.label || '',
-                m.points[0]?.x || '',
-                m.points[0]?.y || '',
+                m.points[0]?.x ?? '',
+                m.points[0]?.y ?? '',
                 m.points[1]?.label || '',
-                m.points[1]?.x || '',
-                m.points[1]?.y || '',
+                m.points[1]?.x ?? '',
+                m.points[1]?.y ?? '',
                 m.points[2]?.label || '',
-                m.points[2]?.x || '',
-                m.points[2]?.y || '',
+                m.points[2]?.x ?? '',
+                m.points[2]?.y ?? '',
                 m.angle_value,
                 fidelity.check1,
                 fidelity.check2,
@@ -133,7 +147,7 @@ class ExportManager {
         // Create CSV content
         const csvContent = [
             headers.join(','),
-            ...rows.map(row => row.map(value => `"${value}"`).join(','))
+            ...rows.map(row => row.map(value => this.escapeCsvValue(value)).join(','))
         ].join('\n');
 
         // Download
@@ -148,7 +162,7 @@ class ExportManager {
      */
     exportJSON() {
         if (!this.sessionData || this.measurements.length === 0) {
-            alert('エクスポートするデータがありません');
+            ui.showToast('エクスポートするデータがありません', 'error');
             return;
         }
 
@@ -195,10 +209,11 @@ class ExportManager {
 
     /**
      * Export all overlay images
+     * Supports both Blob (from IndexedDB) and Canvas (legacy) image formats
      */
     async exportAllImages() {
         if (!this.sessionData || this.measurements.length === 0) {
-            alert('エクスポートする画像がありません');
+            ui.showToast('エクスポートする画像がありません', 'error');
             return;
         }
 
@@ -207,12 +222,12 @@ class ExportManager {
         // Export each measurement's overlay image
         for (let i = 0; i < this.measurements.length; i++) {
             const m = this.measurements[i];
-            
+
             if (m.overlay_image) {
                 await this.exportSingleImage(
                     m.overlay_image,
                     `${baseFilename}_measurement${i + 1}_overlay.png`,
-                    i * 300 // Delay to prevent browser blocking
+                    i * 300
                 );
             }
         }
@@ -231,21 +246,36 @@ class ExportManager {
 
     /**
      * Export single image with delay
+     * Accepts both Blob and Canvas objects
      */
-    exportSingleImage(canvas, filename, delay = 0) {
+    exportSingleImage(imageData, filename, delay = 0) {
         return new Promise((resolve) => {
             setTimeout(() => {
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = filename;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    }
+                if (imageData instanceof Blob) {
+                    // Already a Blob (from IndexedDB storage)
+                    const url = URL.createObjectURL(imageData);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
                     resolve();
-                }, 'image/png');
+                } else if (imageData && typeof imageData.toBlob === 'function') {
+                    // Canvas element (legacy path)
+                    imageData.toBlob((blob) => {
+                        if (blob) {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }
+                        resolve();
+                    }, 'image/png');
+                } else {
+                    resolve();
+                }
             }, delay);
         });
     }
@@ -255,7 +285,7 @@ class ExportManager {
      */
     exportImages(originalCanvas, overlayCanvas) {
         if (!originalCanvas || !overlayCanvas || !this.sessionData) {
-            alert('エクスポートする画像がありません');
+            ui.showToast('エクスポートする画像がありません', 'error');
             return;
         }
 
@@ -333,12 +363,12 @@ class ExportManager {
      */
     async shareFiles() {
         if (!this.sessionData || this.measurements.length === 0) {
-            alert('共有するデータがありません');
+            ui.showToast('共有するデータがありません', 'error');
             return;
         }
 
         if (!this.canShare()) {
-            alert('このブラウザは共有機能をサポートしていません。ダウンロードボタンをお使いください。');
+            ui.showToast('共有非対応のブラウザです。ダウンロードをお使いください。', 'info');
             return;
         }
 
@@ -364,24 +394,31 @@ class ExportManager {
                 this.sessionData.operator_id || '', this.sessionData.side,
                 this.sessionData.mode || 'realtime', this.sessionData.imported_file_name || '',
                 this.sessionData.measurement_type,
-                index + 1, m.points[0]?.label || '', m.points[0]?.x || '', m.points[0]?.y || '',
-                m.points[1]?.label || '', m.points[1]?.x || '', m.points[1]?.y || '',
-                m.points[2]?.label || '', m.points[2]?.x || '', m.points[2]?.y || '',
+                index + 1, m.points[0]?.label || '', m.points[0]?.x ?? '', m.points[0]?.y ?? '',
+                m.points[1]?.label || '', m.points[1]?.x ?? '', m.points[1]?.y ?? '',
+                m.points[2]?.label || '', m.points[2]?.x ?? '', m.points[2]?.y ?? '',
                 m.angle_value, fidelity.check1, fidelity.check2, fidelity.check3, fidelity.check4,
                 m.timestamp || this.sessionData.timestamp, this.sessionData.device_info
             ]);
-            const csvContent = '\uFEFF' + [csvHeaders.join(','), ...csvRows.map(row => row.map(v => `"${v}"`).join(','))].join('\n');
+            const csvContent = '\uFEFF' + [csvHeaders.join(','), ...csvRows.map(row => row.map(v => this.escapeCsvValue(v)).join(','))].join('\n');
             const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
             const csvFile = new File([csvBlob], `${baseFilename}.csv`, { type: 'text/csv' });
             files.push(csvFile);
 
-            // Create image files
+            // Create image files (supports both Blob and Canvas)
             for (let i = 0; i < this.measurements.length; i++) {
                 const m = this.measurements[i];
                 if (m.overlay_image) {
-                    const imageBlob = await new Promise(resolve => m.overlay_image.toBlob(resolve, 'image/png'));
-                    const imageFile = new File([imageBlob], `${baseFilename}_measurement${i + 1}.png`, { type: 'image/png' });
-                    files.push(imageFile);
+                    let imageBlob;
+                    if (m.overlay_image instanceof Blob) {
+                        imageBlob = m.overlay_image;
+                    } else if (typeof m.overlay_image.toBlob === 'function') {
+                        imageBlob = await new Promise(resolve => m.overlay_image.toBlob(resolve, 'image/png'));
+                    }
+                    if (imageBlob) {
+                        const imageFile = new File([imageBlob], `${baseFilename}_measurement${i + 1}.png`, { type: 'image/png' });
+                        files.push(imageFile);
+                    }
                 }
             }
 
@@ -394,12 +431,12 @@ class ExportManager {
                 });
                 console.log('Files shared successfully via AirDrop/Share');
             } else {
-                alert('このファイル形式は共有できません。ダウンロードボタンをお使いください。');
+                ui.showToast('この形式は共有できません。ダウンロードをお使いください。', 'info');
             }
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error('Share failed:', error);
-                alert('共有に失敗しました。ダウンロードボタンをお使いください。');
+                ui.showToast('共有に失敗しました', 'error');
             }
         }
     }
