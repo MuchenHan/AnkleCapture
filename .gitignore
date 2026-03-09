@@ -25,6 +25,16 @@ Thumbs.db
 dist/
 build/
 
+# Node
+node_modules/
+package-lock.json
+
+# Capacitor native projects
+ios/
+android/
+*.xcworkspace
+Pods/
+
 # Research and Non-Webapp files
 .agent/
 Results/

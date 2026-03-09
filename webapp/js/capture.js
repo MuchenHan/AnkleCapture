@@ -189,7 +189,7 @@ class CaptureManager {
         this.capturedCanvas = camera.captureImage();
 
         if (!this.capturedCanvas) {
-            alert('画像のキャプチャに失敗しました');
+            ui.showToast('キャプチャに失敗しました', 'error');
             return null;
         }
 

@@ -1,0 +1,21 @@
+{
+  "appId": "com.anklecapture.app",
+  "appName": "AnkleCapture",
+  "webDir": "webapp",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "Dark"
+    },
+    "Keyboard": {
+      "resize": "body"
+    }
+  },
+  "ios": {
+    "scheme": "AnkleCapture",
+    "contentInset": "always"
+  }
+}

@@ -38,6 +38,12 @@
     color: var(--success);
 }
 
+@keyframes anglePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
 .angle-result {
     margin-top: var(--spacing-md);
     padding: var(--spacing-md);
@@ -46,11 +52,13 @@
     border-radius: var(--border-radius);
     text-align: center;
     font-size: var(--font-size-lg);
+    animation: anglePulse 0.5s ease;
 }
 
 .angle-result #angle-value {
-    font-size: var(--font-size-xl);
+    font-size: 2rem;
     font-weight: 700;
+    font-feature-settings: "tnum";
 }
 
 .image-container {
@@ -77,6 +85,11 @@
 .measurement-controls .btn {
     flex: 1;
     min-width: 120px;
+}
+
+.measurement-controls .btn-undo {
+    background: var(--warning);
+    color: white;
 }
 
 /* Measurement List Styles */

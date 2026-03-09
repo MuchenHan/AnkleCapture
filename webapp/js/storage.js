@@ -49,9 +49,19 @@ class StorageManager {
     }
 
     /**
+     * Ensure database is initialized before use
+     */
+    _ensureDB() {
+        if (!this.db) {
+            throw new Error('Database not initialized. Call init() first.');
+        }
+    }
+
+    /**
      * Save single measurement data (legacy)
      */
     async saveMeasurement(data) {
+        this._ensureDB();
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
@@ -73,6 +83,7 @@ class StorageManager {
      * Save measurement session with multiple measurements (NEW)
      */
     async saveMeasurementSession(sessionData) {
+        this._ensureDB();
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
@@ -100,6 +111,7 @@ class StorageManager {
      * Get measurement by session ID
      */
     async getMeasurement(sessionId) {
+        this._ensureDB();
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const objectStore = transaction.objectStore(STORE_NAME);
@@ -119,6 +131,7 @@ class StorageManager {
      * Get all measurements
      */
     async getAllMeasurements() {
+        this._ensureDB();
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const objectStore = transaction.objectStore(STORE_NAME);
@@ -138,6 +151,7 @@ class StorageManager {
      * Delete measurement
      */
     async deleteMeasurement(sessionId) {
+        this._ensureDB();
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const objectStore = transaction.objectStore(STORE_NAME);
@@ -152,6 +166,48 @@ class StorageManager {
                 reject(request.error);
             };
         });
+    }
+
+    /**
+     * Batch delete measurements in a single transaction (atomic)
+     */
+    async batchDeleteMeasurements(ids) {
+        this._ensureDB();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            ids.forEach(id => store.delete(id));
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+        });
+    }
+
+    /**
+     * Get storage statistics
+     */
+    async getStorageStats() {
+        const all = await this.getAllMeasurements();
+        // Rough size estimate: serialize to JSON and count bytes
+        let estimatedSizeBytes = 0;
+        try {
+            // Count Blob sizes in measurements
+            for (const session of all) {
+                const measurements = session.measurements || [];
+                for (const m of measurements) {
+                    if (m.original_image instanceof Blob) estimatedSizeBytes += m.original_image.size;
+                    if (m.overlay_image instanceof Blob) estimatedSizeBytes += m.overlay_image.size;
+                    if (m.thumbnail_image instanceof Blob) estimatedSizeBytes += m.thumbnail_image.size;
+                }
+                // Add ~1KB for metadata per session
+                estimatedSizeBytes += 1024;
+            }
+        } catch (e) {
+            console.warn('Could not estimate storage size:', e);
+        }
+        return {
+            sessionCount: all.length,
+            estimatedSizeBytes
+        };
     }
 
     /**
